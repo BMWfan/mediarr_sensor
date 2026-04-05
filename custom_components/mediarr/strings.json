@@ -1,0 +1,112 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Mediarr",
+        "description": "Choose which modules you want to configure via the UI.",
+        "data": {
+          "title": "Entry name",
+          "setup_seer": "Configure Seer (Overseerr/Jellyseerr)",
+          "setup_immaculaterr": "Configure Immaculaterr",
+          "setup_tmdb": "Configure TMDB"
+        }
+      },
+      "seer": {
+        "title": "Seer",
+        "data": {
+          "url": "Seer URL",
+          "api_key": "Seer API key",
+          "tmdb_api_key": "TMDB API key (optional)",
+          "max_items": "Max items",
+          "trending": "Enable trending sensor",
+          "discover": "Enable discover sensor",
+          "popular_movies": "Enable popular movies sensor",
+          "popular_tv": "Enable popular TV sensor"
+        }
+      },
+      "immaculaterr": {
+        "title": "Immaculaterr",
+        "data": {
+          "url": "Immaculaterr URL",
+          "username": "Username",
+          "password": "Password",
+          "mode": "Mode",
+          "max_items": "Max items",
+          "tmdb_api_key": "TMDB API key (optional)",
+          "movie_library_section_key": "Movie library section key (optional)",
+          "tv_library_section_key": "TV library section key (optional)"
+        }
+      },
+      "tmdb": {
+        "title": "TMDB",
+        "data": {
+          "tmdb_api_key": "TMDB API key",
+          "max_items": "Max items",
+          "trending": "Enable trending",
+          "now_playing": "Enable now playing",
+          "upcoming": "Enable upcoming",
+          "on_air": "Enable on air",
+          "airing_today": "Enable airing today",
+          "popular_movies": "Enable popular movies",
+          "popular_tv": "Enable popular TV"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only one Mediarr configuration is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Mediarr options",
+        "description": "Enable and configure modules.",
+        "data": {
+          "setup_seer": "Configure Seer (Overseerr/Jellyseerr)",
+          "setup_immaculaterr": "Configure Immaculaterr",
+          "setup_tmdb": "Configure TMDB"
+        }
+      },
+      "seer": {
+        "title": "Seer",
+        "data": {
+          "url": "Seer URL",
+          "api_key": "Seer API key",
+          "tmdb_api_key": "TMDB API key (optional)",
+          "max_items": "Max items",
+          "trending": "Enable trending sensor",
+          "discover": "Enable discover sensor",
+          "popular_movies": "Enable popular movies sensor",
+          "popular_tv": "Enable popular TV sensor"
+        }
+      },
+      "immaculaterr": {
+        "title": "Immaculaterr",
+        "data": {
+          "url": "Immaculaterr URL",
+          "username": "Username",
+          "password": "Password",
+          "mode": "Mode",
+          "max_items": "Max items",
+          "tmdb_api_key": "TMDB API key (optional)",
+          "movie_library_section_key": "Movie library section key (optional)",
+          "tv_library_section_key": "TV library section key (optional)"
+        }
+      },
+      "tmdb": {
+        "title": "TMDB",
+        "data": {
+          "tmdb_api_key": "TMDB API key",
+          "max_items": "Max items",
+          "trending": "Enable trending",
+          "now_playing": "Enable now playing",
+          "upcoming": "Enable upcoming",
+          "on_air": "Enable on air",
+          "airing_today": "Enable airing today",
+          "popular_movies": "Enable popular movies",
+          "popular_tv": "Enable popular TV"
+        }
+      }
+    }
+  }
+}

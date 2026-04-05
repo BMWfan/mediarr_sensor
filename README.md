@@ -57,6 +57,16 @@ This integration is YAML-based. After installing it with HACS, configure `mediar
 
 ## Configuration
 
+### Option A: Configure via Home Assistant UI (recommended)
+After installing with HACS and restarting Home Assistant:
+1. Go to **Settings -> Devices & Services**
+2. Click **Add Integration**
+3. Search for **Mediarr**
+4. Complete the setup flow (Seer / Immaculaterr / TMDB)
+5. Use **Configure** on the integration later to update options
+
+This UI flow creates a config entry and removes the need for full YAML sensor setup in most cases.
+
 ### Step 1: Configure Sensors
 Add one or more of the following sensors to your `configuration.yaml, sensors`:
 **Customizable Filters**: Control content discovery with granular options
