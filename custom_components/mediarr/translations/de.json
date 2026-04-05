@@ -2,7 +2,8 @@
   "config": {
     "error": {
       "missing_library_section_key": "Bitte mindestens einen Library-Section-Key setzen (Film oder TV).",
-      "missing_tmdb_api_key": "Bitte einen TMDB-API-Key für TMDB-Sensoren setzen."
+      "missing_tmdb_api_key": "Bitte einen TMDB-API-Key für TMDB-Sensoren setzen.",
+      "missing_tmdb_api_key_for_module": "Aktiviere zuerst den gemeinsamen TMDB-API-Key und danach die TMDB-Anreicherung für dieses Modul."
     },
     "step": {
       "user": {
@@ -21,7 +22,7 @@
         "data": {
           "url": "Seer-URL",
           "api_key": "Seer-API-Key",
-          "tmdb_api_key": "TMDB-API-Key (optional)",
+          "tmdb_enrichment": "TMDB-Anreicherung aktivieren",
           "max_items": "Maximale Einträge",
           "trending": "Trending-Sensor aktivieren",
           "discover": "Discover-Sensor aktivieren",
@@ -37,7 +38,7 @@
           "password": "Passwort",
           "mode": "Modus",
           "max_items": "Maximale Einträge",
-          "tmdb_api_key": "TMDB-API-Key (optional)",
+          "tmdb_enrichment": "TMDB-Anreicherung aktivieren",
           "movie_library_section_keys": "Film-Bibliotheken (automatisch erkannt)",
           "tv_library_section_keys": "TV-Bibliotheken (automatisch erkannt)",
           "movie_library_section_key": "Film-Library-Section-Key (optional)",
@@ -66,7 +67,8 @@
   "options": {
     "error": {
       "missing_library_section_key": "Bitte mindestens einen Library-Section-Key setzen (Film oder TV).",
-      "missing_tmdb_api_key": "Bitte einen TMDB-API-Key für TMDB-Sensoren setzen."
+      "missing_tmdb_api_key": "Bitte einen TMDB-API-Key für TMDB-Sensoren setzen.",
+      "missing_tmdb_api_key_for_module": "Aktiviere zuerst den gemeinsamen TMDB-API-Key und danach die TMDB-Anreicherung für dieses Modul."
     },
     "step": {
       "init": {
@@ -84,7 +86,7 @@
         "data": {
           "url": "Seer-URL",
           "api_key": "Seer-API-Key",
-          "tmdb_api_key": "TMDB-API-Key (optional)",
+          "tmdb_enrichment": "TMDB-Anreicherung aktivieren",
           "max_items": "Maximale Einträge",
           "trending": "Trending-Sensor aktivieren",
           "discover": "Discover-Sensor aktivieren",
@@ -100,7 +102,7 @@
           "password": "Passwort",
           "mode": "Modus",
           "max_items": "Maximale Einträge",
-          "tmdb_api_key": "TMDB-API-Key (optional)",
+          "tmdb_enrichment": "TMDB-Anreicherung aktivieren",
           "movie_library_section_keys": "Film-Bibliotheken (automatisch erkannt)",
           "tv_library_section_keys": "TV-Bibliotheken (automatisch erkannt)",
           "movie_library_section_key": "Film-Library-Section-Key (optional)",

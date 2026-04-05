@@ -22,6 +22,7 @@ SECTION_SEER = "seer"
 SECTION_IMMACULATERR = "immaculaterr"
 SECTION_TMDB = "tmdb"
 TMDB_KEY_FIELD = "tmdb_api_key"
+TMDB_ENRICHMENT_FIELD = "tmdb_enrichment"
 MANAGED_SECTIONS = (SECTION_SEER, SECTION_IMMACULATERR, SECTION_TMDB)
 _LOGGER = logging.getLogger(__name__)
 
@@ -290,22 +291,29 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_seer(self, user_input: dict[str, Any] | None = None):
         """Configure Seer (Overseerr/Jellyseerr)."""
+        errors: dict[str, str] = {}
         if user_input is None:
             return self.async_show_form(
                 step_id="seer",
                 data_schema=self._seer_schema(self._effective_tmdb_api_key()),
+                errors=errors,
             )
 
-        tmdb_api_key = (
-            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
-            or self._effective_tmdb_api_key()
-        )
-        self._remember_tmdb_api_key(tmdb_api_key)
+        tmdb_enrichment = bool(user_input.get(TMDB_ENRICHMENT_FIELD, False))
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if tmdb_enrichment and not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_module"
+            return self.async_show_form(
+                step_id="seer",
+                data_schema=self._seer_schema(self._effective_tmdb_api_key()),
+                errors=errors,
+            )
 
         self._data[SECTION_SEER] = {
             "url": user_input["url"].strip(),
             "api_key": user_input["api_key"].strip(),
-            TMDB_KEY_FIELD: tmdb_api_key,
+            TMDB_ENRICHMENT_FIELD: tmdb_enrichment,
+            TMDB_KEY_FIELD: tmdb_api_key if tmdb_enrichment else None,
             "max_items": user_input["max_items"],
             "trending": user_input["trending"],
             "discover": user_input["discover"],
@@ -357,11 +365,18 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors=errors,
             )
 
-        tmdb_api_key = (
-            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
-            or self._effective_tmdb_api_key()
-        )
-        self._remember_tmdb_api_key(tmdb_api_key)
+        tmdb_enrichment = bool(user_input.get(TMDB_ENRICHMENT_FIELD, False))
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if tmdb_enrichment and not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_module"
+            return self.async_show_form(
+                step_id="immaculaterr",
+                data_schema=self._immaculaterr_schema(
+                    self._discovered_plex_sections,
+                    self._effective_tmdb_api_key(),
+                ),
+                errors=errors,
+            )
 
         self._data[SECTION_IMMACULATERR] = {
             "url": user_input["url"].strip(),
@@ -369,7 +384,8 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             "password": user_input["password"],
             "mode": user_input["mode"],
             "max_items": user_input["max_items"],
-            TMDB_KEY_FIELD: tmdb_api_key,
+            TMDB_ENRICHMENT_FIELD: tmdb_enrichment,
+            TMDB_KEY_FIELD: tmdb_api_key if tmdb_enrichment else None,
             "movie_library_section_key": (
                 movie_library_section_keys[0] if movie_library_section_keys else None
             ),
@@ -429,11 +445,12 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     def _seer_schema(self, default_tmdb_api_key: str | None = None) -> vol.Schema:
+        default_tmdb_enrichment = bool(default_tmdb_api_key)
         return vol.Schema(
             {
                 vol.Required("url"): str,
                 vol.Required("api_key"): str,
-                vol.Optional(TMDB_KEY_FIELD, default=default_tmdb_api_key or ""): str,
+                vol.Optional(TMDB_ENRICHMENT_FIELD, default=default_tmdb_enrichment): bool,
                 vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
                 vol.Optional("trending", default=True): bool,
                 vol.Optional("discover", default=True): bool,
@@ -453,7 +470,10 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("password"): str,
             vol.Required("mode", default="review"): vol.In(["review", "pendingApproval"]),
             vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
-            vol.Optional(TMDB_KEY_FIELD, default=default_tmdb_api_key or ""): str,
+            vol.Optional(
+                TMDB_ENRICHMENT_FIELD,
+                default=bool(default_tmdb_api_key),
+            ): bool,
         }
 
         movie_options = _build_section_options(discovered_sections, media_type="movie")
@@ -556,22 +576,29 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
     async def async_step_seer(self, user_input: dict[str, Any] | None = None):
         """Configure Seer in options."""
         defaults = self._base_config.get(SECTION_SEER) or {}
+        errors: dict[str, str] = {}
         if user_input is None:
             return self.async_show_form(
                 step_id="seer",
                 data_schema=self._seer_schema(defaults, self._effective_tmdb_api_key()),
+                errors=errors,
             )
 
-        tmdb_api_key = (
-            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
-            or self._effective_tmdb_api_key()
-        )
-        self._remember_tmdb_api_key(tmdb_api_key)
+        tmdb_enrichment = bool(user_input.get(TMDB_ENRICHMENT_FIELD, False))
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if tmdb_enrichment and not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_module"
+            return self.async_show_form(
+                step_id="seer",
+                data_schema=self._seer_schema(defaults, self._effective_tmdb_api_key()),
+                errors=errors,
+            )
 
         self._data[SECTION_SEER] = {
             "url": user_input["url"].strip(),
             "api_key": user_input["api_key"].strip(),
-            TMDB_KEY_FIELD: tmdb_api_key,
+            TMDB_ENRICHMENT_FIELD: tmdb_enrichment,
+            TMDB_KEY_FIELD: tmdb_api_key if tmdb_enrichment else None,
             "max_items": user_input["max_items"],
             "trending": user_input["trending"],
             "discover": user_input["discover"],
@@ -626,11 +653,19 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                 errors=errors,
             )
 
-        tmdb_api_key = (
-            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
-            or self._effective_tmdb_api_key()
-        )
-        self._remember_tmdb_api_key(tmdb_api_key)
+        tmdb_enrichment = bool(user_input.get(TMDB_ENRICHMENT_FIELD, False))
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if tmdb_enrichment and not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_module"
+            return self.async_show_form(
+                step_id="immaculaterr",
+                data_schema=self._immaculaterr_schema(
+                    defaults,
+                    self._discovered_plex_sections,
+                    self._effective_tmdb_api_key(),
+                ),
+                errors=errors,
+            )
 
         self._data[SECTION_IMMACULATERR] = {
             "url": user_input["url"].strip(),
@@ -638,7 +673,8 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
             "password": user_input["password"],
             "mode": user_input["mode"],
             "max_items": user_input["max_items"],
-            TMDB_KEY_FIELD: tmdb_api_key,
+            TMDB_ENRICHMENT_FIELD: tmdb_enrichment,
+            TMDB_KEY_FIELD: tmdb_api_key if tmdb_enrichment else None,
             "movie_library_section_key": (
                 movie_library_section_keys[0] if movie_library_section_keys else None
             ),
@@ -709,14 +745,20 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
         defaults: dict[str, Any],
         default_tmdb_api_key: str | None = None,
     ) -> vol.Schema:
+        default_tmdb_enrichment_raw = defaults.get(TMDB_ENRICHMENT_FIELD)
+        if default_tmdb_enrichment_raw is None:
+            default_tmdb_enrichment = bool(
+                defaults.get(TMDB_KEY_FIELD) or default_tmdb_api_key
+            )
+        else:
+            default_tmdb_enrichment = bool(default_tmdb_enrichment_raw)
         return vol.Schema(
             {
                 vol.Required("url", default=defaults.get("url", "")): str,
                 vol.Required("api_key", default=defaults.get("api_key", "")): str,
                 vol.Optional(
-                    TMDB_KEY_FIELD,
-                    default=defaults.get(TMDB_KEY_FIELD) or default_tmdb_api_key or "",
-                ): str,
+                    TMDB_ENRICHMENT_FIELD, default=default_tmdb_enrichment
+                ): bool,
                 vol.Required(
                     "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
                 ): _int_field(),
@@ -733,6 +775,13 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
         discovered_sections: list[dict[str, str]],
         default_tmdb_api_key: str | None = None,
     ) -> vol.Schema:
+        default_tmdb_enrichment_raw = defaults.get(TMDB_ENRICHMENT_FIELD)
+        if default_tmdb_enrichment_raw is None:
+            default_tmdb_enrichment = bool(
+                defaults.get(TMDB_KEY_FIELD) or default_tmdb_api_key
+            )
+        else:
+            default_tmdb_enrichment = bool(default_tmdb_enrichment_raw)
         schema: dict[Any, Any] = {
             vol.Required("url", default=defaults.get("url", "")): str,
             vol.Required("username", default=defaults.get("username", "")): str,
@@ -744,9 +793,8 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                 "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
             ): _int_field(),
             vol.Optional(
-                TMDB_KEY_FIELD,
-                default=defaults.get(TMDB_KEY_FIELD) or default_tmdb_api_key or "",
-            ): str,
+                TMDB_ENRICHMENT_FIELD, default=default_tmdb_enrichment
+            ): bool,
         }
 
         default_movie_keys = _extract_section_keys(

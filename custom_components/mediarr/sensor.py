@@ -199,7 +199,10 @@ async def _async_build_sensors(
     if seer_config:
         from .services.seer import SeerMediarrSensor
         from .discovery.seer_discovery import SeerDiscoveryMediarrSensor
-        seer_tmdb_api_key = _resolve_tmdb_api_key(config, seer_config)
+        seer_tmdb_enabled = seer_config.get("tmdb_enrichment", True)
+        seer_tmdb_api_key = (
+            _resolve_tmdb_api_key(config, seer_config) if seer_tmdb_enabled else None
+        )
         filters = seer_config.get("filters", {})
 
         sensors.append(SeerMediarrSensor(
@@ -273,7 +276,12 @@ async def _async_build_sensors(
             plural_key="tv_library_section_keys",
         )
         mode = immaculaterr_config.get("mode", "review")
-        tmdb_api_key = _resolve_tmdb_api_key(config, immaculaterr_config)
+        immac_tmdb_enabled = immaculaterr_config.get("tmdb_enrichment", True)
+        tmdb_api_key = (
+            _resolve_tmdb_api_key(config, immaculaterr_config)
+            if immac_tmdb_enabled
+            else None
+        )
         max_items = immaculaterr_config.get("max_items", DEFAULT_MAX_ITEMS)
         if not movie_library_section_keys and not tv_library_section_keys:
             _LOGGER.warning(
