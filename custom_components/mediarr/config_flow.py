@@ -15,18 +15,52 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from . import DOMAIN
-from .common.const import DEFAULT_MAX_ITEMS
+from .common.const import DEFAULT_DAYS, DEFAULT_MAX_ITEMS
 from .config_helpers import get_entry_config
 
 SECTION_SEER = "seer"
 SECTION_IMMACULATERR = "immaculaterr"
 SECTION_TMDB = "tmdb"
+SECTION_PLEX = "plex"
+SECTION_JELLYFIN = "jellyfin"
+SECTION_SONARR = "sonarr"
+SECTION_SONARR2 = "sonarr2"
+SECTION_RADARR = "radarr"
+SECTION_RADARR2 = "radarr2"
+SECTION_TRAKT = "trakt"
+
 FIELD_ENABLE_SEER = "seer"
 FIELD_ENABLE_IMMACULATERR = "immaculaterr"
 FIELD_ENABLE_TMDB = "tmdb"
+FIELD_ENABLE_PLEX = "plex"
+FIELD_ENABLE_JELLYFIN = "jellyfin"
+FIELD_ENABLE_SONARR = "sonarr"
+FIELD_ENABLE_SONARR2 = "sonarr2"
+FIELD_ENABLE_RADARR = "radarr"
+FIELD_ENABLE_RADARR2 = "radarr2"
+FIELD_ENABLE_TRAKT = "trakt"
 TMDB_KEY_FIELD = "tmdb_api_key"
 TMDB_ENRICHMENT_FIELD = "tmdb_enrichment"
-MANAGED_SECTIONS = (SECTION_SEER, SECTION_IMMACULATERR, SECTION_TMDB)
+MANAGED_SECTIONS = (
+    SECTION_SEER,
+    SECTION_IMMACULATERR,
+    SECTION_TMDB,
+    SECTION_PLEX,
+    SECTION_JELLYFIN,
+    SECTION_SONARR,
+    SECTION_SONARR2,
+    SECTION_RADARR,
+    SECTION_RADARR2,
+    SECTION_TRAKT,
+)
+TMDB_KEY_SECTIONS = (
+    SECTION_TMDB,
+    SECTION_SEER,
+    SECTION_IMMACULATERR,
+    SECTION_PLEX,
+    SECTION_JELLYFIN,
+    SECTION_TRAKT,
+)
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -72,7 +106,7 @@ def _extract_shared_tmdb_api_key(config: dict[str, Any]) -> str | None:
     if direct:
         return direct
 
-    for section in MANAGED_SECTIONS:
+    for section in TMDB_KEY_SECTIONS:
         section_config = config.get(section)
         if isinstance(section_config, dict):
             key = _normalize_optional_text(section_config.get(TMDB_KEY_FIELD))
@@ -87,7 +121,7 @@ def _apply_shared_tmdb_api_key(config: dict[str, Any], shared_tmdb_api_key: str 
     if not normalized:
         return
 
-    for section in MANAGED_SECTIONS:
+    for section in TMDB_KEY_SECTIONS:
         section_config = config.get(section)
         if isinstance(section_config, dict):
             if not _normalize_optional_text(section_config.get(TMDB_KEY_FIELD)):
@@ -272,6 +306,19 @@ def _immaculaterr_mode_selector() -> selector.SelectSelector:
     )
 
 
+def _trakt_trending_selector() -> selector.SelectSelector:
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value="both", label="Movies + Shows"),
+                selector.SelectOptionDict(value="movies", label="Movies"),
+                selector.SelectOptionDict(value="shows", label="Shows"),
+            ],
+            mode=selector.SelectSelectorMode.LIST,
+        )
+    )
+
+
 class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Mediarr."""
 
@@ -448,6 +495,158 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
         return await self._next_step()
 
+    async def async_step_plex(self, user_input: dict[str, Any] | None = None):
+        """Configure Plex sensor."""
+        errors: dict[str, str] = {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="plex",
+                data_schema=self._plex_schema(),
+                errors=errors,
+            )
+
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_dependency"
+            return self.async_show_form(
+                step_id="plex",
+                data_schema=self._plex_schema(),
+                errors=errors,
+            )
+
+        self._data[SECTION_PLEX] = {
+            "url": user_input["url"].strip(),
+            "token": user_input["token"].strip(),
+            TMDB_KEY_FIELD: tmdb_api_key,
+            "max_items": user_input["max_items"],
+            "language": user_input["language"].strip() or "en",
+        }
+        return await self._next_step()
+
+    async def async_step_jellyfin(self, user_input: dict[str, Any] | None = None):
+        """Configure Jellyfin sensor."""
+        errors: dict[str, str] = {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="jellyfin",
+                data_schema=self._jellyfin_schema(),
+                errors=errors,
+            )
+
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_dependency"
+            return self.async_show_form(
+                step_id="jellyfin",
+                data_schema=self._jellyfin_schema(),
+                errors=errors,
+            )
+
+        self._data[SECTION_JELLYFIN] = {
+            "url": user_input["url"].strip(),
+            "token": user_input["token"].strip(),
+            TMDB_KEY_FIELD: tmdb_api_key,
+            "max_items": user_input["max_items"],
+            "language": user_input["language"].strip() or "en",
+        }
+        return await self._next_step()
+
+    async def async_step_sonarr(self, user_input: dict[str, Any] | None = None):
+        """Configure Sonarr sensor."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="sonarr",
+                data_schema=self._sonarr_schema(),
+                errors={},
+            )
+
+        self._data[SECTION_SONARR] = {
+            "url": user_input["url"].strip(),
+            "api_key": user_input["api_key"].strip(),
+            "max_items": user_input["max_items"],
+            "days_to_check": user_input["days_to_check"],
+        }
+        return await self._next_step()
+
+    async def async_step_sonarr2(self, user_input: dict[str, Any] | None = None):
+        """Configure Sonarr2 sensor."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="sonarr2",
+                data_schema=self._sonarr_schema(),
+                errors={},
+            )
+
+        self._data[SECTION_SONARR2] = {
+            "url": user_input["url"].strip(),
+            "api_key": user_input["api_key"].strip(),
+            "max_items": user_input["max_items"],
+            "days_to_check": user_input["days_to_check"],
+        }
+        return await self._next_step()
+
+    async def async_step_radarr(self, user_input: dict[str, Any] | None = None):
+        """Configure Radarr sensor."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="radarr",
+                data_schema=self._radarr_schema(),
+                errors={},
+            )
+
+        self._data[SECTION_RADARR] = {
+            "url": user_input["url"].strip(),
+            "api_key": user_input["api_key"].strip(),
+            "max_items": user_input["max_items"],
+            "days_to_check": user_input["days_to_check"],
+        }
+        return await self._next_step()
+
+    async def async_step_radarr2(self, user_input: dict[str, Any] | None = None):
+        """Configure Radarr2 sensor."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="radarr2",
+                data_schema=self._radarr_schema(),
+                errors={},
+            )
+
+        self._data[SECTION_RADARR2] = {
+            "url": user_input["url"].strip(),
+            "api_key": user_input["api_key"].strip(),
+            "max_items": user_input["max_items"],
+            "days_to_check": user_input["days_to_check"],
+        }
+        return await self._next_step()
+
+    async def async_step_trakt(self, user_input: dict[str, Any] | None = None):
+        """Configure Trakt sensor."""
+        errors: dict[str, str] = {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="trakt",
+                data_schema=self._trakt_schema(),
+                errors=errors,
+            )
+
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_dependency"
+            return self.async_show_form(
+                step_id="trakt",
+                data_schema=self._trakt_schema(),
+                errors=errors,
+            )
+
+        self._data[SECTION_TRAKT] = {
+            "client_id": user_input["client_id"].strip(),
+            "client_secret": user_input["client_secret"].strip(),
+            "trending_type": user_input["trending_type"],
+            "max_items": user_input["max_items"],
+            TMDB_KEY_FIELD: tmdb_api_key,
+        }
+        return await self._next_step()
+
     def _user_schema(self) -> vol.Schema:
         return vol.Schema(
             {
@@ -455,6 +654,13 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(FIELD_ENABLE_SEER, default=True): bool,
                 vol.Optional(FIELD_ENABLE_IMMACULATERR, default=False): bool,
                 vol.Optional(FIELD_ENABLE_TMDB, default=False): bool,
+                vol.Optional(FIELD_ENABLE_PLEX, default=False): bool,
+                vol.Optional(FIELD_ENABLE_JELLYFIN, default=False): bool,
+                vol.Optional(FIELD_ENABLE_SONARR, default=False): bool,
+                vol.Optional(FIELD_ENABLE_SONARR2, default=False): bool,
+                vol.Optional(FIELD_ENABLE_RADARR, default=False): bool,
+                vol.Optional(FIELD_ENABLE_RADARR2, default=False): bool,
+                vol.Optional(FIELD_ENABLE_TRAKT, default=False): bool,
             }
         )
 
@@ -536,14 +742,78 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
+    def _plex_schema(self) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("url"): str,
+                vol.Required("token"): str,
+                vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
+                vol.Optional("language", default="en"): str,
+            }
+        )
+
+    def _jellyfin_schema(self) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("url"): str,
+                vol.Required("token"): str,
+                vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
+                vol.Optional("language", default="en"): str,
+            }
+        )
+
+    def _sonarr_schema(self) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("url"): str,
+                vol.Required("api_key"): str,
+                vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
+                vol.Required("days_to_check", default=DEFAULT_DAYS): _int_field(1, 365),
+            }
+        )
+
+    def _radarr_schema(self) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("url"): str,
+                vol.Required("api_key"): str,
+                vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
+                vol.Required("days_to_check", default=DEFAULT_DAYS): _int_field(1, 365),
+            }
+        )
+
+    def _trakt_schema(self) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("client_id"): str,
+                vol.Required("client_secret"): str,
+                vol.Required("trending_type", default="both"): _trakt_trending_selector(),
+                vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
+            }
+        )
+
     def _selected_sections(self, user_input: dict[str, Any]) -> list[str]:
         sections: list[str] = []
         if user_input.get(FIELD_ENABLE_TMDB):
             sections.append(SECTION_TMDB)
+        if user_input.get(FIELD_ENABLE_PLEX):
+            sections.append(SECTION_PLEX)
+        if user_input.get(FIELD_ENABLE_JELLYFIN):
+            sections.append(SECTION_JELLYFIN)
+        if user_input.get(FIELD_ENABLE_TRAKT):
+            sections.append(SECTION_TRAKT)
         if user_input.get(FIELD_ENABLE_SEER):
             sections.append(SECTION_SEER)
         if user_input.get(FIELD_ENABLE_IMMACULATERR):
             sections.append(SECTION_IMMACULATERR)
+        if user_input.get(FIELD_ENABLE_SONARR):
+            sections.append(SECTION_SONARR)
+        if user_input.get(FIELD_ENABLE_SONARR2):
+            sections.append(SECTION_SONARR2)
+        if user_input.get(FIELD_ENABLE_RADARR):
+            sections.append(SECTION_RADARR)
+        if user_input.get(FIELD_ENABLE_RADARR2):
+            sections.append(SECTION_RADARR2)
         return sections
 
     async def _next_step(self):
@@ -736,6 +1006,165 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
         }
         return await self._next_step()
 
+    async def async_step_plex(self, user_input: dict[str, Any] | None = None):
+        """Configure Plex in options."""
+        defaults = self._base_config.get(SECTION_PLEX) or {}
+        errors: dict[str, str] = {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="plex",
+                data_schema=self._plex_schema(defaults),
+                errors=errors,
+            )
+
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_dependency"
+            return self.async_show_form(
+                step_id="plex",
+                data_schema=self._plex_schema(defaults),
+                errors=errors,
+            )
+
+        self._data[SECTION_PLEX] = {
+            "url": user_input["url"].strip(),
+            "token": user_input["token"].strip(),
+            TMDB_KEY_FIELD: tmdb_api_key,
+            "max_items": user_input["max_items"],
+            "language": user_input["language"].strip() or "en",
+        }
+        return await self._next_step()
+
+    async def async_step_jellyfin(self, user_input: dict[str, Any] | None = None):
+        """Configure Jellyfin in options."""
+        defaults = self._base_config.get(SECTION_JELLYFIN) or {}
+        errors: dict[str, str] = {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="jellyfin",
+                data_schema=self._jellyfin_schema(defaults),
+                errors=errors,
+            )
+
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_dependency"
+            return self.async_show_form(
+                step_id="jellyfin",
+                data_schema=self._jellyfin_schema(defaults),
+                errors=errors,
+            )
+
+        self._data[SECTION_JELLYFIN] = {
+            "url": user_input["url"].strip(),
+            "token": user_input["token"].strip(),
+            TMDB_KEY_FIELD: tmdb_api_key,
+            "max_items": user_input["max_items"],
+            "language": user_input["language"].strip() or "en",
+        }
+        return await self._next_step()
+
+    async def async_step_sonarr(self, user_input: dict[str, Any] | None = None):
+        """Configure Sonarr in options."""
+        defaults = self._base_config.get(SECTION_SONARR) or {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="sonarr",
+                data_schema=self._sonarr_schema(defaults),
+                errors={},
+            )
+
+        self._data[SECTION_SONARR] = {
+            "url": user_input["url"].strip(),
+            "api_key": user_input["api_key"].strip(),
+            "max_items": user_input["max_items"],
+            "days_to_check": user_input["days_to_check"],
+        }
+        return await self._next_step()
+
+    async def async_step_sonarr2(self, user_input: dict[str, Any] | None = None):
+        """Configure Sonarr2 in options."""
+        defaults = self._base_config.get(SECTION_SONARR2) or {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="sonarr2",
+                data_schema=self._sonarr_schema(defaults),
+                errors={},
+            )
+
+        self._data[SECTION_SONARR2] = {
+            "url": user_input["url"].strip(),
+            "api_key": user_input["api_key"].strip(),
+            "max_items": user_input["max_items"],
+            "days_to_check": user_input["days_to_check"],
+        }
+        return await self._next_step()
+
+    async def async_step_radarr(self, user_input: dict[str, Any] | None = None):
+        """Configure Radarr in options."""
+        defaults = self._base_config.get(SECTION_RADARR) or {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="radarr",
+                data_schema=self._radarr_schema(defaults),
+                errors={},
+            )
+
+        self._data[SECTION_RADARR] = {
+            "url": user_input["url"].strip(),
+            "api_key": user_input["api_key"].strip(),
+            "max_items": user_input["max_items"],
+            "days_to_check": user_input["days_to_check"],
+        }
+        return await self._next_step()
+
+    async def async_step_radarr2(self, user_input: dict[str, Any] | None = None):
+        """Configure Radarr2 in options."""
+        defaults = self._base_config.get(SECTION_RADARR2) or {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="radarr2",
+                data_schema=self._radarr_schema(defaults),
+                errors={},
+            )
+
+        self._data[SECTION_RADARR2] = {
+            "url": user_input["url"].strip(),
+            "api_key": user_input["api_key"].strip(),
+            "max_items": user_input["max_items"],
+            "days_to_check": user_input["days_to_check"],
+        }
+        return await self._next_step()
+
+    async def async_step_trakt(self, user_input: dict[str, Any] | None = None):
+        """Configure Trakt in options."""
+        defaults = self._base_config.get(SECTION_TRAKT) or {}
+        errors: dict[str, str] = {}
+        if user_input is None:
+            return self.async_show_form(
+                step_id="trakt",
+                data_schema=self._trakt_schema(defaults),
+                errors=errors,
+            )
+
+        tmdb_api_key = self._effective_tmdb_api_key()
+        if not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key_for_dependency"
+            return self.async_show_form(
+                step_id="trakt",
+                data_schema=self._trakt_schema(defaults),
+                errors=errors,
+            )
+
+        self._data[SECTION_TRAKT] = {
+            "client_id": user_input["client_id"].strip(),
+            "client_secret": user_input["client_secret"].strip(),
+            "trending_type": user_input["trending_type"],
+            "max_items": user_input["max_items"],
+            TMDB_KEY_FIELD: tmdb_api_key,
+        }
+        return await self._next_step()
+
     def _user_schema(self) -> vol.Schema:
         return vol.Schema(
             {
@@ -750,6 +1179,34 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     FIELD_ENABLE_TMDB,
                     default=bool(self._base_config.get(SECTION_TMDB)),
+                ): bool,
+                vol.Optional(
+                    FIELD_ENABLE_PLEX,
+                    default=bool(self._base_config.get(SECTION_PLEX)),
+                ): bool,
+                vol.Optional(
+                    FIELD_ENABLE_JELLYFIN,
+                    default=bool(self._base_config.get(SECTION_JELLYFIN)),
+                ): bool,
+                vol.Optional(
+                    FIELD_ENABLE_SONARR,
+                    default=bool(self._base_config.get(SECTION_SONARR)),
+                ): bool,
+                vol.Optional(
+                    FIELD_ENABLE_SONARR2,
+                    default=bool(self._base_config.get(SECTION_SONARR2)),
+                ): bool,
+                vol.Optional(
+                    FIELD_ENABLE_RADARR,
+                    default=bool(self._base_config.get(SECTION_RADARR)),
+                ): bool,
+                vol.Optional(
+                    FIELD_ENABLE_RADARR2,
+                    default=bool(self._base_config.get(SECTION_RADARR2)),
+                ): bool,
+                vol.Optional(
+                    FIELD_ENABLE_TRAKT,
+                    default=bool(self._base_config.get(SECTION_TRAKT)),
                 ): bool,
             }
         )
@@ -885,14 +1342,97 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
             }
         )
 
+    def _plex_schema(self, defaults: dict[str, Any]) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("url", default=defaults.get("url", "")): str,
+                vol.Required("token", default=defaults.get("token", "")): str,
+                vol.Required(
+                    "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
+                ): _int_field(),
+                vol.Optional("language", default=defaults.get("language", "en")): str,
+            }
+        )
+
+    def _jellyfin_schema(self, defaults: dict[str, Any]) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("url", default=defaults.get("url", "")): str,
+                vol.Required("token", default=defaults.get("token", "")): str,
+                vol.Required(
+                    "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
+                ): _int_field(),
+                vol.Optional("language", default=defaults.get("language", "en")): str,
+            }
+        )
+
+    def _sonarr_schema(self, defaults: dict[str, Any]) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("url", default=defaults.get("url", "")): str,
+                vol.Required("api_key", default=defaults.get("api_key", "")): str,
+                vol.Required(
+                    "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
+                ): _int_field(),
+                vol.Required(
+                    "days_to_check", default=defaults.get("days_to_check", DEFAULT_DAYS)
+                ): _int_field(1, 365),
+            }
+        )
+
+    def _radarr_schema(self, defaults: dict[str, Any]) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("url", default=defaults.get("url", "")): str,
+                vol.Required("api_key", default=defaults.get("api_key", "")): str,
+                vol.Required(
+                    "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
+                ): _int_field(),
+                vol.Required(
+                    "days_to_check", default=defaults.get("days_to_check", DEFAULT_DAYS)
+                ): _int_field(1, 365),
+            }
+        )
+
+    def _trakt_schema(self, defaults: dict[str, Any]) -> vol.Schema:
+        return vol.Schema(
+            {
+                vol.Required("client_id", default=defaults.get("client_id", "")): str,
+                vol.Required(
+                    "client_secret", default=defaults.get("client_secret", "")
+                ): str,
+                vol.Required(
+                    "trending_type",
+                    default=defaults.get("trending_type", "both"),
+                ): _trakt_trending_selector(),
+                vol.Required(
+                    "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
+                ): _int_field(),
+            }
+        )
+
     def _selected_sections(self, user_input: dict[str, Any]) -> list[str]:
         sections: list[str] = []
         if user_input.get(FIELD_ENABLE_TMDB):
             sections.append(SECTION_TMDB)
+        if user_input.get(FIELD_ENABLE_PLEX):
+            sections.append(SECTION_PLEX)
+        if user_input.get(FIELD_ENABLE_JELLYFIN):
+            sections.append(SECTION_JELLYFIN)
+        if user_input.get(FIELD_ENABLE_TRAKT):
+            sections.append(SECTION_TRAKT)
         if user_input.get(FIELD_ENABLE_SEER):
             sections.append(SECTION_SEER)
         if user_input.get(FIELD_ENABLE_IMMACULATERR):
             sections.append(SECTION_IMMACULATERR)
+        if user_input.get(FIELD_ENABLE_SONARR):
+            sections.append(SECTION_SONARR)
+        if user_input.get(FIELD_ENABLE_SONARR2):
+            sections.append(SECTION_SONARR2)
+        if user_input.get(FIELD_ENABLE_RADARR):
+            sections.append(SECTION_RADARR)
+        if user_input.get(FIELD_ENABLE_RADARR2):
+            sections.append(SECTION_RADARR2)
         return sections
 
     async def _next_step(self):

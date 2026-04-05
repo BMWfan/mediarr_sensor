@@ -3,7 +3,8 @@
     "error": {
       "missing_library_section_key": "Set at least one library section key (movie or TV).",
       "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors.",
-      "missing_tmdb_api_key_for_module": "Enable shared TMDB API key first, then enable TMDB enrichment for this module."
+      "missing_tmdb_api_key_for_module": "Enable shared TMDB API key first, then enable TMDB enrichment for this module.",
+      "missing_tmdb_api_key_for_dependency": "Set a TMDB API key in the TMDB module first."
     },
     "step": {
       "user": {
@@ -13,12 +14,26 @@
           "title": "Entry name",
           "seer": "Seer (Overseerr/Jellyseerr)",
           "immaculaterr": "Immaculaterr",
-          "tmdb": "TMDB"
+          "tmdb": "TMDB",
+          "plex": "Plex",
+          "jellyfin": "Jellyfin",
+          "sonarr": "Sonarr",
+          "sonarr2": "Sonarr (instance 2)",
+          "radarr": "Radarr",
+          "radarr2": "Radarr (instance 2)",
+          "trakt": "Trakt"
         },
         "data_description": {
           "seer": "Adds recommendation sensors and request actions from Overseerr/Jellyseerr.",
           "immaculaterr": "Adds Immaculaterr movie and TV suggestion sensors.",
-          "tmdb": "Configures TMDB sensors and the shared TMDB API key for enrichment."
+          "tmdb": "Configures TMDB sensors and the shared TMDB API key for enrichment.",
+          "plex": "Adds a Plex recently-added sensor with TMDB poster/backdrop enrichment.",
+          "jellyfin": "Adds a Jellyfin recently-added sensor with TMDB poster/backdrop enrichment.",
+          "sonarr": "Adds a Sonarr calendar sensor for upcoming episodes.",
+          "sonarr2": "Adds a second Sonarr calendar sensor instance.",
+          "radarr": "Adds a Radarr calendar sensor for upcoming movie releases.",
+          "radarr2": "Adds a second Radarr calendar sensor instance.",
+          "trakt": "Adds Trakt popular/trending discovery with TMDB posters."
         }
       },
       "seer": {
@@ -81,6 +96,82 @@
         "data_description": {
           "tmdb_api_key": "This key is reused by modules that enable TMDB enrichment.",
           "max_items": "Maximum number of items returned per sensor update."
+        }
+      },
+      "plex": {
+        "title": "Plex",
+        "description": "Connect Plex for the recently added sensor.",
+        "data": {
+          "url": "Plex URL",
+          "token": "Plex token",
+          "max_items": "Maximum items",
+          "language": "TMDB language"
+        },
+        "data_description": {
+          "language": "Language code used for TMDB metadata, for example en or de."
+        }
+      },
+      "jellyfin": {
+        "title": "Jellyfin",
+        "description": "Connect Jellyfin for the recently added sensor.",
+        "data": {
+          "url": "Jellyfin URL",
+          "token": "Jellyfin API key",
+          "max_items": "Maximum items",
+          "language": "TMDB language"
+        },
+        "data_description": {
+          "language": "Language code used for TMDB metadata, for example en or de."
+        }
+      },
+      "sonarr": {
+        "title": "Sonarr",
+        "description": "Configure Sonarr for upcoming episodes.",
+        "data": {
+          "url": "Sonarr URL",
+          "api_key": "Sonarr API key",
+          "max_items": "Maximum items",
+          "days_to_check": "Days to check"
+        }
+      },
+      "sonarr2": {
+        "title": "Sonarr (instance 2)",
+        "description": "Configure a second Sonarr instance for upcoming episodes.",
+        "data": {
+          "url": "Sonarr URL",
+          "api_key": "Sonarr API key",
+          "max_items": "Maximum items",
+          "days_to_check": "Days to check"
+        }
+      },
+      "radarr": {
+        "title": "Radarr",
+        "description": "Configure Radarr for upcoming movie releases.",
+        "data": {
+          "url": "Radarr URL",
+          "api_key": "Radarr API key",
+          "max_items": "Maximum items",
+          "days_to_check": "Days to check"
+        }
+      },
+      "radarr2": {
+        "title": "Radarr (instance 2)",
+        "description": "Configure a second Radarr instance for upcoming movie releases.",
+        "data": {
+          "url": "Radarr URL",
+          "api_key": "Radarr API key",
+          "max_items": "Maximum items",
+          "days_to_check": "Days to check"
+        }
+      },
+      "trakt": {
+        "title": "Trakt",
+        "description": "Configure Trakt discovery.",
+        "data": {
+          "client_id": "Trakt client ID",
+          "client_secret": "Trakt client secret",
+          "trending_type": "Trending type",
+          "max_items": "Maximum items"
         }
       }
     },
@@ -92,7 +183,8 @@
     "error": {
       "missing_library_section_key": "Set at least one library section key (movie or TV).",
       "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors.",
-      "missing_tmdb_api_key_for_module": "Enable shared TMDB API key first, then enable TMDB enrichment for this module."
+      "missing_tmdb_api_key_for_module": "Enable shared TMDB API key first, then enable TMDB enrichment for this module.",
+      "missing_tmdb_api_key_for_dependency": "Set a TMDB API key in the TMDB module first."
     },
     "step": {
       "init": {
@@ -101,12 +193,26 @@
         "data": {
           "seer": "Seer (Overseerr/Jellyseerr)",
           "immaculaterr": "Immaculaterr",
-          "tmdb": "TMDB"
+          "tmdb": "TMDB",
+          "plex": "Plex",
+          "jellyfin": "Jellyfin",
+          "sonarr": "Sonarr",
+          "sonarr2": "Sonarr (instance 2)",
+          "radarr": "Radarr",
+          "radarr2": "Radarr (instance 2)",
+          "trakt": "Trakt"
         },
         "data_description": {
           "seer": "Adds recommendation sensors and request actions from Overseerr/Jellyseerr.",
           "immaculaterr": "Adds Immaculaterr movie and TV suggestion sensors.",
-          "tmdb": "Configures TMDB sensors and the shared TMDB API key for enrichment."
+          "tmdb": "Configures TMDB sensors and the shared TMDB API key for enrichment.",
+          "plex": "Adds a Plex recently-added sensor with TMDB poster/backdrop enrichment.",
+          "jellyfin": "Adds a Jellyfin recently-added sensor with TMDB poster/backdrop enrichment.",
+          "sonarr": "Adds a Sonarr calendar sensor for upcoming episodes.",
+          "sonarr2": "Adds a second Sonarr calendar sensor instance.",
+          "radarr": "Adds a Radarr calendar sensor for upcoming movie releases.",
+          "radarr2": "Adds a second Radarr calendar sensor instance.",
+          "trakt": "Adds Trakt popular/trending discovery with TMDB posters."
         }
       },
       "seer": {
@@ -169,6 +275,82 @@
         "data_description": {
           "tmdb_api_key": "This key is reused by modules that enable TMDB enrichment.",
           "max_items": "Maximum number of items returned per sensor update."
+        }
+      },
+      "plex": {
+        "title": "Plex",
+        "description": "Connect Plex for the recently added sensor.",
+        "data": {
+          "url": "Plex URL",
+          "token": "Plex token",
+          "max_items": "Maximum items",
+          "language": "TMDB language"
+        },
+        "data_description": {
+          "language": "Language code used for TMDB metadata, for example en or de."
+        }
+      },
+      "jellyfin": {
+        "title": "Jellyfin",
+        "description": "Connect Jellyfin for the recently added sensor.",
+        "data": {
+          "url": "Jellyfin URL",
+          "token": "Jellyfin API key",
+          "max_items": "Maximum items",
+          "language": "TMDB language"
+        },
+        "data_description": {
+          "language": "Language code used for TMDB metadata, for example en or de."
+        }
+      },
+      "sonarr": {
+        "title": "Sonarr",
+        "description": "Configure Sonarr for upcoming episodes.",
+        "data": {
+          "url": "Sonarr URL",
+          "api_key": "Sonarr API key",
+          "max_items": "Maximum items",
+          "days_to_check": "Days to check"
+        }
+      },
+      "sonarr2": {
+        "title": "Sonarr (instance 2)",
+        "description": "Configure a second Sonarr instance for upcoming episodes.",
+        "data": {
+          "url": "Sonarr URL",
+          "api_key": "Sonarr API key",
+          "max_items": "Maximum items",
+          "days_to_check": "Days to check"
+        }
+      },
+      "radarr": {
+        "title": "Radarr",
+        "description": "Configure Radarr for upcoming movie releases.",
+        "data": {
+          "url": "Radarr URL",
+          "api_key": "Radarr API key",
+          "max_items": "Maximum items",
+          "days_to_check": "Days to check"
+        }
+      },
+      "radarr2": {
+        "title": "Radarr (instance 2)",
+        "description": "Configure a second Radarr instance for upcoming movie releases.",
+        "data": {
+          "url": "Radarr URL",
+          "api_key": "Radarr API key",
+          "max_items": "Maximum items",
+          "days_to_check": "Days to check"
+        }
+      },
+      "trakt": {
+        "title": "Trakt",
+        "description": "Configure Trakt discovery.",
+        "data": {
+          "client_id": "Trakt client ID",
+          "client_secret": "Trakt client secret",
+          "trending_type": "Trending type",
+          "max_items": "Maximum items"
         }
       }
     }
