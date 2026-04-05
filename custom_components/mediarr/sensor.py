@@ -54,6 +54,29 @@ def _extract_section_keys(
     return keys
 
 
+def _resolve_tmdb_api_key(
+    config: dict[str, Any],
+    section_config: dict[str, Any] | None = None,
+) -> str | None:
+    if isinstance(section_config, dict):
+        section_key = str(section_config.get("tmdb_api_key") or "").strip()
+        if section_key:
+            return section_key
+
+    global_key = str(config.get("tmdb_api_key") or "").strip()
+    if global_key:
+        return global_key
+
+    for section in ("tmdb", "seer", "immaculaterr"):
+        candidate_section = config.get(section)
+        if isinstance(candidate_section, dict):
+            candidate_key = str(candidate_section.get("tmdb_api_key") or "").strip()
+            if candidate_key:
+                return candidate_key
+
+    return None
+
+
 async def _async_build_sensors(
     hass,
     config: dict[str, Any],
@@ -141,7 +164,7 @@ async def _async_build_sensors(
     tmdb_config = config.get("tmdb")
     if tmdb_config:
         from .discovery.tmdb import TMDBMediarrSensor
-        tmdb_api_key = tmdb_config.get("tmdb_api_key")
+        tmdb_api_key = _resolve_tmdb_api_key(config, tmdb_config)
         filters = tmdb_config.get("filters", {})
 
         for endpoint in ["trending", "now_playing", "upcoming", "on_air", "airing_today"]:
@@ -176,13 +199,14 @@ async def _async_build_sensors(
     if seer_config:
         from .services.seer import SeerMediarrSensor
         from .discovery.seer_discovery import SeerDiscoveryMediarrSensor
+        seer_tmdb_api_key = _resolve_tmdb_api_key(config, seer_config)
         filters = seer_config.get("filters", {})
 
         sensors.append(SeerMediarrSensor(
             session,
             seer_config["api_key"],
             seer_config["url"],
-            seer_config.get("tmdb_api_key"),
+            seer_tmdb_api_key,
             seer_config.get("max_items", DEFAULT_MAX_ITEMS)
         ))
 
@@ -191,7 +215,7 @@ async def _async_build_sensors(
                 session,
                 seer_config["api_key"],
                 seer_config["url"],
-                seer_config.get("tmdb_api_key"),
+                seer_tmdb_api_key,
                 seer_config.get("max_items", DEFAULT_MAX_ITEMS),
                 "trending",
                 None,
@@ -203,7 +227,7 @@ async def _async_build_sensors(
                 session,
                 seer_config["api_key"],
                 seer_config["url"],
-                seer_config.get("tmdb_api_key"),
+                seer_tmdb_api_key,
                 seer_config.get("max_items", DEFAULT_MAX_ITEMS),
                 "popular_movies",
                 "movies",
@@ -215,7 +239,7 @@ async def _async_build_sensors(
                 session,
                 seer_config["api_key"],
                 seer_config["url"],
-                seer_config.get("tmdb_api_key"),
+                seer_tmdb_api_key,
                 seer_config.get("max_items", DEFAULT_MAX_ITEMS),
                 "popular_tv",
                 "tv",
@@ -227,7 +251,7 @@ async def _async_build_sensors(
                 session,
                 seer_config["api_key"],
                 seer_config["url"],
-                seer_config.get("tmdb_api_key"),
+                seer_tmdb_api_key,
                 seer_config.get("max_items", DEFAULT_MAX_ITEMS),
                 "discover",
                 None,
@@ -249,7 +273,7 @@ async def _async_build_sensors(
             plural_key="tv_library_section_keys",
         )
         mode = immaculaterr_config.get("mode", "review")
-        tmdb_api_key = immaculaterr_config.get("tmdb_api_key")
+        tmdb_api_key = _resolve_tmdb_api_key(config, immaculaterr_config)
         max_items = immaculaterr_config.get("max_items", DEFAULT_MAX_ITEMS)
         if not movie_library_section_keys and not tv_library_section_keys:
             _LOGGER.warning(

@@ -1,7 +1,8 @@
 {
   "config": {
     "error": {
-      "missing_library_section_key": "Set at least one library section key (movie or TV)."
+      "missing_library_section_key": "Set at least one library section key (movie or TV).",
+      "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors."
     },
     "step": {
       "user": {
@@ -11,7 +12,8 @@
           "title": "Entry name",
           "setup_seer": "Configure Seer (Overseerr/Jellyseerr)",
           "setup_immaculaterr": "Configure Immaculaterr",
-          "setup_tmdb": "Configure TMDB"
+          "setup_tmdb": "Configure TMDB",
+          "tmdb_api_key": "Shared TMDB API key (enter once)"
         }
       },
       "seer": {
@@ -63,7 +65,8 @@
   },
   "options": {
     "error": {
-      "missing_library_section_key": "Set at least one library section key (movie or TV)."
+      "missing_library_section_key": "Set at least one library section key (movie or TV).",
+      "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors."
     },
     "step": {
       "init": {
@@ -72,7 +75,8 @@
         "data": {
           "setup_seer": "Configure Seer (Overseerr/Jellyseerr)",
           "setup_immaculaterr": "Configure Immaculaterr",
-          "setup_tmdb": "Configure TMDB"
+          "setup_tmdb": "Configure TMDB",
+          "tmdb_api_key": "Shared TMDB API key (enter once)"
         }
       },
       "seer": {
