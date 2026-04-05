@@ -318,9 +318,27 @@ async def async_setup_services(hass: HomeAssistant, domain: str) -> bool:
             await handler.async_update_request(call)
 
     try:
-        hass.services.async_register(domain, SERVICE_MOVIE_REQUEST, handle_movie_request, schema=MOVIE_REQUEST_SCHEMA)
-        hass.services.async_register(domain, SERVICE_TV_REQUEST, handle_tv_request, schema=TV_REQUEST_SCHEMA)
-        hass.services.async_register(domain, SERVICE_UPDATE_REQUEST, handle_update_request, schema=UPDATE_REQUEST_SCHEMA)
+        if not hass.services.has_service(domain, SERVICE_MOVIE_REQUEST):
+            hass.services.async_register(
+                domain,
+                SERVICE_MOVIE_REQUEST,
+                handle_movie_request,
+                schema=MOVIE_REQUEST_SCHEMA,
+            )
+        if not hass.services.has_service(domain, SERVICE_TV_REQUEST):
+            hass.services.async_register(
+                domain,
+                SERVICE_TV_REQUEST,
+                handle_tv_request,
+                schema=TV_REQUEST_SCHEMA,
+            )
+        if not hass.services.has_service(domain, SERVICE_UPDATE_REQUEST):
+            hass.services.async_register(
+                domain,
+                SERVICE_UPDATE_REQUEST,
+                handle_update_request,
+                schema=UPDATE_REQUEST_SCHEMA,
+            )
         
         
         _LOGGER.info("Successfully registered all Mediarr services")
@@ -332,13 +350,15 @@ async def async_setup_services(hass: HomeAssistant, domain: str) -> bool:
 
 async def async_unload_services(hass: HomeAssistant, domain: str) -> bool:
     """Unload Mediarr services."""
-    handler = hass.data[domain].get("seer_request_handler")
+    handler = hass.data.get(domain, {}).get("seer_request_handler")
     if handler:
         await handler.close()
-    
-    hass.services.async_remove(domain, SERVICE_MOVIE_REQUEST)
-    hass.services.async_remove(domain, SERVICE_TV_REQUEST)
-    hass.services.async_remove(domain, SERVICE_UPDATE_REQUEST)
-    
-    
+
+    if hass.services.has_service(domain, SERVICE_MOVIE_REQUEST):
+        hass.services.async_remove(domain, SERVICE_MOVIE_REQUEST)
+    if hass.services.has_service(domain, SERVICE_TV_REQUEST):
+        hass.services.async_remove(domain, SERVICE_TV_REQUEST)
+    if hass.services.has_service(domain, SERVICE_UPDATE_REQUEST):
+        hass.services.async_remove(domain, SERVICE_UPDATE_REQUEST)
+
     return True

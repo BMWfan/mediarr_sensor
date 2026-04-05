@@ -1,96 +1,110 @@
-# Modified version of sensor.py to incorporate filters
+"""Sensor platform for Mediarr."""
+from __future__ import annotations
+
+from typing import Any
+
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
 from . import DOMAIN
-from .discovery.tmdb import TMDB_ENDPOINTS
+from .config_helpers import get_entry_config
 from .common.const import (
-    CONF_MAX_ITEMS, 
-    CONF_DAYS, 
-    DEFAULT_MAX_ITEMS, 
-    DEFAULT_DAYS
+    DEFAULT_DAYS,
+    DEFAULT_MAX_ITEMS,
 )
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up Mediarr sensors from YAML configuration."""
+
+async def _async_build_sensors(
+    hass,
+    config: dict[str, Any],
+    *,
+    setup_yaml_immaculaterr_services: bool,
+) -> list:
+    """Create sensors from config."""
     session = async_get_clientsession(hass)
     sensors = []
 
-    # Server Sensors
-    if "plex" in config:
+    plex_config = config.get("plex")
+    if plex_config:
         from .server.plex import PlexMediarrSensor
-        plex_sensors = await PlexMediarrSensor.create_sensors(hass, config["plex"])
+        plex_sensors = await PlexMediarrSensor.create_sensors(hass, plex_config)
         sensors.extend(plex_sensors)
 
-    if "jellyfin" in config:
+    jellyfin_config = config.get("jellyfin")
+    if jellyfin_config:
         from .server.jellyfin import JellyfinMediarrSensor
-        jellyfin_sensors = await JellyfinMediarrSensor.create_sensors(hass, config["jellyfin"])
+        jellyfin_sensors = await JellyfinMediarrSensor.create_sensors(hass, jellyfin_config)
         sensors.extend(jellyfin_sensors)
 
-    if "emby" in config:
+    emby_config = config.get("emby")
+    if emby_config:
         from .server.emby import EmbyMediarrSensor
-        emby_sensors = await EmbyMediarrSensor.create_sensors(hass, config["emby"])
+        emby_sensors = await EmbyMediarrSensor.create_sensors(hass, emby_config)
         sensors.extend(emby_sensors)
 
-    # Manager Sensors
-    if "sonarr" in config:
+    sonarr_config = config.get("sonarr")
+    if sonarr_config:
         from .manager.sonarr import SonarrMediarrSensor
         sensors.append(SonarrMediarrSensor(
             session,
-            config["sonarr"]["api_key"],
-            config["sonarr"]["url"],
-            config["sonarr"].get("max_items", DEFAULT_MAX_ITEMS),
-            config["sonarr"].get("days_to_check", DEFAULT_DAYS)
+            sonarr_config["api_key"],
+            sonarr_config["url"],
+            sonarr_config.get("max_items", DEFAULT_MAX_ITEMS),
+            sonarr_config.get("days_to_check", DEFAULT_DAYS)
         ))
-    if "sonarr2" in config:
+
+    sonarr2_config = config.get("sonarr2")
+    if sonarr2_config:
         from .manager.sonarr2 import Sonarr2MediarrSensor
         sensors.append(Sonarr2MediarrSensor(
             session,
-            config["sonarr2"]["api_key"],
-            config["sonarr2"]["url"],
-            config["sonarr2"].get("max_items", DEFAULT_MAX_ITEMS),
-            config["sonarr2"].get("days_to_check", DEFAULT_DAYS)
+            sonarr2_config["api_key"],
+            sonarr2_config["url"],
+            sonarr2_config.get("max_items", DEFAULT_MAX_ITEMS),
+            sonarr2_config.get("days_to_check", DEFAULT_DAYS)
         ))
-    if "radarr" in config:
+
+    radarr_config = config.get("radarr")
+    if radarr_config:
         from .manager.radarr import RadarrMediarrSensor
         sensors.append(RadarrMediarrSensor(
             session,
-            config["radarr"]["api_key"],
-            config["radarr"]["url"],
-            config["radarr"].get("max_items", DEFAULT_MAX_ITEMS),
-            config["radarr"].get("days_to_check", DEFAULT_DAYS)
+            radarr_config["api_key"],
+            radarr_config["url"],
+            radarr_config.get("max_items", DEFAULT_MAX_ITEMS),
+            radarr_config.get("days_to_check", DEFAULT_DAYS)
         ))
-    if "radarr2" in config:
+
+    radarr2_config = config.get("radarr2")
+    if radarr2_config:
         from .manager.radarr2 import Radarr2MediarrSensor
         sensors.append(Radarr2MediarrSensor(
             session,
-            config["radarr2"]["api_key"],
-            config["radarr2"]["url"],
-            config["radarr2"].get("max_items", DEFAULT_MAX_ITEMS),
-            config["radarr2"].get("days_to_check", DEFAULT_DAYS)
+            radarr2_config["api_key"],
+            radarr2_config["url"],
+            radarr2_config.get("max_items", DEFAULT_MAX_ITEMS),
+            radarr2_config.get("days_to_check", DEFAULT_DAYS)
         ))
 
-    # Discovery Sensors
-    if "trakt" in config:
+    trakt_config = config.get("trakt")
+    if trakt_config:
         from .discovery.trakt import TraktMediarrSensor
         sensors.append(TraktMediarrSensor(
             session,
-            config["trakt"]["client_id"],
-            config["trakt"]["client_secret"],
-            config["trakt"].get("trending_type", "both"),
-            config["trakt"].get("max_items", DEFAULT_MAX_ITEMS),
-            config["trakt"]["tmdb_api_key"]
+            trakt_config["client_id"],
+            trakt_config["client_secret"],
+            trakt_config.get("trending_type", "both"),
+            trakt_config.get("max_items", DEFAULT_MAX_ITEMS),
+            trakt_config["tmdb_api_key"]
         ))
 
-    if "tmdb" in config:
+    tmdb_config = config.get("tmdb")
+    if tmdb_config:
         from .discovery.tmdb import TMDBMediarrSensor
-        tmdb_config = config["tmdb"]
         tmdb_api_key = tmdb_config.get("tmdb_api_key")
         filters = tmdb_config.get("filters", {})
 
-        # Standard endpoints
-        for endpoint in ['trending', 'now_playing', 'upcoming', 'on_air', 'airing_today']:
+        for endpoint in ["trending", "now_playing", "upcoming", "on_air", "airing_today"]:
             if tmdb_config.get(endpoint, False):
                 sensors.append(TMDBMediarrSensor(
                     session,
@@ -100,7 +114,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                     filters
                 ))
 
-        # New endpoints for popular content
         if tmdb_config.get("popular_movies", False):
             sensors.append(TMDBMediarrSensor(
                 session,
@@ -119,13 +132,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 filters
             ))
 
-    if "seer" in config:
+    seer_config = config.get("seer")
+    if seer_config:
         from .services.seer import SeerMediarrSensor
         from .discovery.seer_discovery import SeerDiscoveryMediarrSensor
-        seer_config = config["seer"]
         filters = seer_config.get("filters", {})
-        
-        # Create the original requests sensor
+
         sensors.append(SeerMediarrSensor(
             session,
             seer_config["api_key"],
@@ -133,8 +145,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             seer_config.get("tmdb_api_key"),
             seer_config.get("max_items", DEFAULT_MAX_ITEMS)
         ))
-        
-        # Create additional discovery sensors if enabled with filters
+
         if seer_config.get("trending", False):
             sensors.append(SeerDiscoveryMediarrSensor(
                 session,
@@ -144,9 +155,9 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 seer_config.get("max_items", DEFAULT_MAX_ITEMS),
                 "trending",
                 None,
-                filters  # Pass filters to the sensor
+                filters
             ))
-        
+
         if seer_config.get("popular_movies", False):
             sensors.append(SeerDiscoveryMediarrSensor(
                 session,
@@ -156,9 +167,9 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 seer_config.get("max_items", DEFAULT_MAX_ITEMS),
                 "popular_movies",
                 "movies",
-                filters  # Pass filters to the sensor
+                filters
             ))
-        
+
         if seer_config.get("popular_tv", False):
             sensors.append(SeerDiscoveryMediarrSensor(
                 session,
@@ -168,9 +179,9 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 seer_config.get("max_items", DEFAULT_MAX_ITEMS),
                 "popular_tv",
                 "tv",
-                filters  # Pass filters to the sensor
+                filters
             ))
-        
+
         if seer_config.get("discover", False):
             sensors.append(SeerDiscoveryMediarrSensor(
                 session,
@@ -180,17 +191,12 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 seer_config.get("max_items", DEFAULT_MAX_ITEMS),
                 "discover",
                 None,
-                filters  # Pass filters to the sensor
+                filters
             ))
 
-    if "immaculaterr" in config:
+    immaculaterr_config = config.get("immaculaterr")
+    if immaculaterr_config:
         from .services.immaculaterr import ImmaculaterrMediarrSensor
-        from .services.immaculaterr_requests import (
-            ImmaculaterrRequestHandler,
-            async_setup_immaculaterr_services,
-        )
-
-        immaculaterr_config = config["immaculaterr"]
         movie_library_section_key = (
             immaculaterr_config.get("movie_library_section_key")
             or immaculaterr_config.get("movies_library_section_key")
@@ -224,14 +230,31 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 tmdb_api_key,
             ))
 
-        hass.data.setdefault(DOMAIN, {})
-        if "immaculaterr_request_handler" not in hass.data[DOMAIN]:
-            hass.data[DOMAIN]["immaculaterr_request_handler"] = ImmaculaterrRequestHandler(
-                immaculaterr_config["url"],
-                immaculaterr_config["username"],
-                immaculaterr_config["password"],
+        if setup_yaml_immaculaterr_services:
+            from .services.immaculaterr_requests import (
+                ImmaculaterrRequestHandler,
+                async_setup_immaculaterr_services,
             )
-            await async_setup_immaculaterr_services(hass, DOMAIN)
+
+            hass.data.setdefault(DOMAIN, {})
+            if "immaculaterr_request_handler" not in hass.data[DOMAIN]:
+                hass.data[DOMAIN]["immaculaterr_request_handler"] = ImmaculaterrRequestHandler(
+                    immaculaterr_config["url"],
+                    immaculaterr_config["username"],
+                    immaculaterr_config["password"],
+                )
+                await async_setup_immaculaterr_services(hass, DOMAIN)
+
+    return sensors
+
+
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+    """Set up Mediarr sensors from YAML configuration."""
+    sensors = await _async_build_sensors(
+        hass,
+        config,
+        setup_yaml_immaculaterr_services=True,
+    )
 
     if sensors:
         if "mediarr_sensors" not in hass.data:
@@ -239,9 +262,23 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         hass.data["mediarr_sensors"].extend(sensors)
         async_add_entities(sensors, True)
 
+
+async def async_setup_entry(hass, entry: ConfigEntry, async_add_entities):
+    """Set up Mediarr sensors from a config entry."""
+    config = get_entry_config(entry)
+    sensors = await _async_build_sensors(
+        hass,
+        config,
+        setup_yaml_immaculaterr_services=False,
+    )
+    if sensors:
+        async_add_entities(sensors, True)
+    return True
+
+
 async def async_unload_platform(hass, config):
     """Unload the platform."""
-    if "seer" in config and "mediarr_sensors" in hass.data:
+    if config.get("seer") and "mediarr_sensors" in hass.data:
         sensors = hass.data["mediarr_sensors"]
         seer_sensors = [s for s in sensors if hasattr(s, "get_request_info")]
         for sensor in seer_sensors:
