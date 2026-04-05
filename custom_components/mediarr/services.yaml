@@ -70,3 +70,50 @@ update_request:
           min: 1
           mode: box
 
+process_immaculaterr_suggestion:
+  description: Records an Immaculaterr Observatory decision and optionally applies it immediately.
+  fields:
+    library_section_key:
+      description: Plex library section key configured in Immaculaterr
+      example: "1"
+      required: true
+      selector:
+        text:
+          type: text
+    media_type:
+      description: Type of media
+      example: "movie"
+      required: true
+      selector:
+        select:
+          options:
+            - "movie"
+            - "tv"
+    suggestion_id:
+      description: Suggestion identifier from Immaculaterr (TMDB for movies, TVDB for shows)
+      example: 603
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+    action:
+      description: Decision to store for the suggestion
+      example: "approve"
+      required: true
+      selector:
+        select:
+          options:
+            - "approve"
+            - "reject"
+            - "remove"
+            - "undo"
+            - "keep"
+    apply:
+      description: Whether to run the Immaculaterr apply step right after storing the decision
+      example: true
+      default: true
+      required: false
+      selector:
+        boolean:
+

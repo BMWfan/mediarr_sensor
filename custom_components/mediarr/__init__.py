@@ -1,12 +1,16 @@
 # mediarr/__init__.py
 """The Mediarr integration."""
 from __future__ import annotations
-import logging
 from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from .services.seer_requests import SeerRequestHandler, async_setup_services, async_unload_services
+from .services.immaculaterr_requests import (
+    ImmaculaterrRequestHandler,
+    async_setup_immaculaterr_services,
+    async_unload_immaculaterr_services,
+)
 
 DOMAIN = "mediarr"
 PLATFORMS = [Platform.SENSOR]
@@ -37,6 +41,24 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
             lambda _: async_unload_services(hass, DOMAIN)
         )
 
+    if "immaculaterr" in domain_config:
+        immaculaterr_config = domain_config["immaculaterr"]
+
+        handler = ImmaculaterrRequestHandler(
+            immaculaterr_config["url"],
+            immaculaterr_config["username"],
+            immaculaterr_config["password"],
+        )
+
+        hass.data[DOMAIN]["immaculaterr_request_handler"] = handler
+
+        await async_setup_immaculaterr_services(hass, DOMAIN)
+
+        hass.bus.async_listen_once(
+            "homeassistant_stop",
+            lambda _: async_unload_immaculaterr_services(hass, DOMAIN)
+        )
+
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -60,6 +82,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DOMAIN]["seer_request_handler"] = handler
             await async_setup_services(hass, DOMAIN)
 
+    if "immaculaterr_request_handler" not in hass.data[DOMAIN]:
+        immaculaterr_config = entry.data.get("immaculaterr", {})
+        if immaculaterr_config:
+            handler = ImmaculaterrRequestHandler(
+                immaculaterr_config["url"],
+                immaculaterr_config["username"],
+                immaculaterr_config["password"],
+            )
+            hass.data[DOMAIN]["immaculaterr_request_handler"] = handler
+            await async_setup_immaculaterr_services(hass, DOMAIN)
+
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -73,6 +106,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # If this is the last entry, unload services
         if not hass.data[DOMAIN]:
             await async_unload_services(hass, DOMAIN)
+            await async_unload_immaculaterr_services(hass, DOMAIN)
             hass.data.pop(DOMAIN)
 
     return unload_ok
