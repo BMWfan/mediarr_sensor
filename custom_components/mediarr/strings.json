@@ -2,7 +2,8 @@
   "config": {
     "error": {
       "missing_library_section_key": "Set at least one library section key (movie or TV).",
-      "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors."
+      "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors.",
+      "missing_tmdb_api_key_for_module": "Enable shared TMDB API key first, then enable TMDB enrichment for this module."
     },
     "step": {
       "user": {
@@ -21,7 +22,7 @@
         "data": {
           "url": "Seer URL",
           "api_key": "Seer API key",
-          "tmdb_api_key": "TMDB API key (optional)",
+          "tmdb_enrichment": "Enable TMDB enrichment",
           "max_items": "Max items",
           "trending": "Enable trending sensor",
           "discover": "Enable discover sensor",
@@ -37,7 +38,7 @@
           "password": "Password",
           "mode": "Mode",
           "max_items": "Max items",
-          "tmdb_api_key": "TMDB API key (optional)",
+          "tmdb_enrichment": "Enable TMDB enrichment",
           "movie_library_section_keys": "Movie libraries (auto-detected)",
           "tv_library_section_keys": "TV libraries (auto-detected)",
           "movie_library_section_key": "Movie library section key (optional)",
@@ -66,7 +67,8 @@
   "options": {
     "error": {
       "missing_library_section_key": "Set at least one library section key (movie or TV).",
-      "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors."
+      "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors.",
+      "missing_tmdb_api_key_for_module": "Enable shared TMDB API key first, then enable TMDB enrichment for this module."
     },
     "step": {
       "init": {
@@ -84,7 +86,7 @@
         "data": {
           "url": "Seer URL",
           "api_key": "Seer API key",
-          "tmdb_api_key": "TMDB API key (optional)",
+          "tmdb_enrichment": "Enable TMDB enrichment",
           "max_items": "Max items",
           "trending": "Enable trending sensor",
           "discover": "Enable discover sensor",
@@ -100,7 +102,7 @@
           "password": "Password",
           "mode": "Mode",
           "max_items": "Max items",
-          "tmdb_api_key": "TMDB API key (optional)",
+          "tmdb_enrichment": "Enable TMDB enrichment",
           "movie_library_section_keys": "Movie libraries (auto-detected)",
           "tv_library_section_keys": "TV libraries (auto-detected)",
           "movie_library_section_key": "Movie library section key (optional)",
