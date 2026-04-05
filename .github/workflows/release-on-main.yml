@@ -1,0 +1,72 @@
+name: Release On Main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-on-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from manifest
+        id: version
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import sys
+
+          manifest_path = pathlib.Path("custom_components/mediarr/manifest.json")
+          data = json.loads(manifest_path.read_text(encoding="utf-8"))
+          version = str(data.get("version", "")).strip()
+
+          if not re.fullmatch(r"\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", version):
+              print(f"Invalid manifest version: {version!r}", file=sys.stderr)
+              sys.exit(1)
+
+          tag = f"v{version}"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"version={version}\n")
+              out.write(f"tag={tag}\n")
+          print(f"Resolved release version: {version} ({tag})")
+          PY
+
+      - name: Check if tag already exists
+        id: tag_check
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag ${TAG} already exists. Skipping release creation."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag ${TAG} does not exist yet. Creating release."
+          fi
+
+      - name: Create GitHub Release
+        if: steps.tag_check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          make_latest: true
