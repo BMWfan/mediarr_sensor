@@ -1,0 +1,122 @@
+{
+  "config": {
+    "error": {
+      "missing_library_section_key": "Bitte mindestens einen Library-Section-Key setzen (Film oder TV)."
+    },
+    "step": {
+      "user": {
+        "title": "Mediarr einrichten",
+        "description": "Wähle die Module aus, die du über die UI konfigurieren möchtest.",
+        "data": {
+          "title": "Eintragsname",
+          "setup_seer": "Seer (Overseerr/Jellyseerr) konfigurieren",
+          "setup_immaculaterr": "Immaculaterr konfigurieren",
+          "setup_tmdb": "TMDB konfigurieren"
+        }
+      },
+      "seer": {
+        "title": "Seer",
+        "data": {
+          "url": "Seer-URL",
+          "api_key": "Seer-API-Key",
+          "tmdb_api_key": "TMDB-API-Key (optional)",
+          "max_items": "Maximale Einträge",
+          "trending": "Trending-Sensor aktivieren",
+          "discover": "Discover-Sensor aktivieren",
+          "popular_movies": "Beliebte Filme-Sensor aktivieren",
+          "popular_tv": "Beliebte Serien-Sensor aktivieren"
+        }
+      },
+      "immaculaterr": {
+        "title": "Immaculaterr",
+        "data": {
+          "url": "Immaculaterr-URL",
+          "username": "Benutzername",
+          "password": "Passwort",
+          "mode": "Modus",
+          "max_items": "Maximale Einträge",
+          "tmdb_api_key": "TMDB-API-Key (optional)",
+          "movie_library_section_keys": "Film-Bibliotheken (automatisch erkannt)",
+          "tv_library_section_keys": "TV-Bibliotheken (automatisch erkannt)",
+          "movie_library_section_key": "Film-Library-Section-Key (optional)",
+          "tv_library_section_key": "TV-Library-Section-Key (optional)"
+        }
+      },
+      "tmdb": {
+        "title": "TMDB",
+        "data": {
+          "tmdb_api_key": "TMDB-API-Key",
+          "max_items": "Maximale Einträge",
+          "trending": "Trending aktivieren",
+          "now_playing": "Now Playing aktivieren",
+          "upcoming": "Upcoming aktivieren",
+          "on_air": "On Air aktivieren",
+          "airing_today": "Airing Today aktivieren",
+          "popular_movies": "Beliebte Filme aktivieren",
+          "popular_tv": "Beliebte Serien aktivieren"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Es ist nur eine Mediarr-Konfiguration erlaubt."
+    }
+  },
+  "options": {
+    "error": {
+      "missing_library_section_key": "Bitte mindestens einen Library-Section-Key setzen (Film oder TV)."
+    },
+    "step": {
+      "init": {
+        "title": "Mediarr Optionen",
+        "description": "Module aktivieren und konfigurieren.",
+        "data": {
+          "setup_seer": "Seer (Overseerr/Jellyseerr) konfigurieren",
+          "setup_immaculaterr": "Immaculaterr konfigurieren",
+          "setup_tmdb": "TMDB konfigurieren"
+        }
+      },
+      "seer": {
+        "title": "Seer",
+        "data": {
+          "url": "Seer-URL",
+          "api_key": "Seer-API-Key",
+          "tmdb_api_key": "TMDB-API-Key (optional)",
+          "max_items": "Maximale Einträge",
+          "trending": "Trending-Sensor aktivieren",
+          "discover": "Discover-Sensor aktivieren",
+          "popular_movies": "Beliebte Filme-Sensor aktivieren",
+          "popular_tv": "Beliebte Serien-Sensor aktivieren"
+        }
+      },
+      "immaculaterr": {
+        "title": "Immaculaterr",
+        "data": {
+          "url": "Immaculaterr-URL",
+          "username": "Benutzername",
+          "password": "Passwort",
+          "mode": "Modus",
+          "max_items": "Maximale Einträge",
+          "tmdb_api_key": "TMDB-API-Key (optional)",
+          "movie_library_section_keys": "Film-Bibliotheken (automatisch erkannt)",
+          "tv_library_section_keys": "TV-Bibliotheken (automatisch erkannt)",
+          "movie_library_section_key": "Film-Library-Section-Key (optional)",
+          "tv_library_section_key": "TV-Library-Section-Key (optional)"
+        }
+      },
+      "tmdb": {
+        "title": "TMDB",
+        "data": {
+          "tmdb_api_key": "TMDB-API-Key",
+          "max_items": "Maximale Einträge",
+          "trending": "Trending aktivieren",
+          "now_playing": "Now Playing aktivieren",
+          "upcoming": "Upcoming aktivieren",
+          "on_air": "On Air aktivieren",
+          "airing_today": "Airing Today aktivieren",
+          "popular_movies": "Beliebte Filme aktivieren",
+          "popular_tv": "Beliebte Serien aktivieren"
+        }
+      }
+    }
+  }
+}
