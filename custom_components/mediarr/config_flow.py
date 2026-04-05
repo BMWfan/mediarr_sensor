@@ -21,6 +21,7 @@ from .config_helpers import get_entry_config
 SECTION_SEER = "seer"
 SECTION_IMMACULATERR = "immaculaterr"
 SECTION_TMDB = "tmdb"
+TMDB_KEY_FIELD = "tmdb_api_key"
 MANAGED_SECTIONS = (SECTION_SEER, SECTION_IMMACULATERR, SECTION_TMDB)
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +61,33 @@ def _extract_section_keys(config: dict[str, Any], *, singular: str, plural: str)
     if single and single not in keys:
         keys.insert(0, single)
     return keys
+
+
+def _extract_shared_tmdb_api_key(config: dict[str, Any]) -> str | None:
+    direct = _normalize_optional_text(config.get(TMDB_KEY_FIELD))
+    if direct:
+        return direct
+
+    for section in MANAGED_SECTIONS:
+        section_config = config.get(section)
+        if isinstance(section_config, dict):
+            key = _normalize_optional_text(section_config.get(TMDB_KEY_FIELD))
+            if key:
+                return key
+    return None
+
+
+def _apply_shared_tmdb_api_key(config: dict[str, Any], shared_tmdb_api_key: str | None) -> None:
+    normalized = _normalize_optional_text(shared_tmdb_api_key)
+    config[TMDB_KEY_FIELD] = normalized
+    if not normalized:
+        return
+
+    for section in MANAGED_SECTIONS:
+        section_config = config.get(section)
+        if isinstance(section_config, dict):
+            if not _normalize_optional_text(section_config.get(TMDB_KEY_FIELD)):
+                section_config[TMDB_KEY_FIELD] = normalized
 
 
 def _filter_keys_to_options(
@@ -234,6 +262,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._data: dict[str, Any] = {}
         self._sections: list[str] = []
         self._title: str = "Mediarr"
+        self._shared_tmdb_api_key: str | None = None
         self._discovered_plex_sections: list[dict[str, str]] = []
         self._plex_discovery_attempted = False
 
@@ -252,6 +281,9 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(step_id="user", data_schema=self._user_schema())
 
         self._title = user_input.get("title", "Mediarr")
+        self._shared_tmdb_api_key = _normalize_optional_text(
+            user_input.get(TMDB_KEY_FIELD)
+        )
         self._sections = self._selected_sections(user_input)
         self._data = {}
         return await self._next_step()
@@ -259,12 +291,21 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_seer(self, user_input: dict[str, Any] | None = None):
         """Configure Seer (Overseerr/Jellyseerr)."""
         if user_input is None:
-            return self.async_show_form(step_id="seer", data_schema=self._seer_schema())
+            return self.async_show_form(
+                step_id="seer",
+                data_schema=self._seer_schema(self._effective_tmdb_api_key()),
+            )
+
+        tmdb_api_key = (
+            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
+            or self._effective_tmdb_api_key()
+        )
+        self._remember_tmdb_api_key(tmdb_api_key)
 
         self._data[SECTION_SEER] = {
             "url": user_input["url"].strip(),
             "api_key": user_input["api_key"].strip(),
-            "tmdb_api_key": user_input.get("tmdb_api_key", "").strip() or None,
+            TMDB_KEY_FIELD: tmdb_api_key,
             "max_items": user_input["max_items"],
             "trending": user_input["trending"],
             "discover": user_input["discover"],
@@ -283,7 +324,10 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(
                 step_id="immaculaterr",
-                data_schema=self._immaculaterr_schema(self._discovered_plex_sections),
+                data_schema=self._immaculaterr_schema(
+                    self._discovered_plex_sections,
+                    self._effective_tmdb_api_key(),
+                ),
                 errors=errors,
             )
 
@@ -306,9 +350,18 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors["base"] = "missing_library_section_key"
             return self.async_show_form(
                 step_id="immaculaterr",
-                data_schema=self._immaculaterr_schema(self._discovered_plex_sections),
+                data_schema=self._immaculaterr_schema(
+                    self._discovered_plex_sections,
+                    self._effective_tmdb_api_key(),
+                ),
                 errors=errors,
             )
+
+        tmdb_api_key = (
+            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
+            or self._effective_tmdb_api_key()
+        )
+        self._remember_tmdb_api_key(tmdb_api_key)
 
         self._data[SECTION_IMMACULATERR] = {
             "url": user_input["url"].strip(),
@@ -316,7 +369,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             "password": user_input["password"],
             "mode": user_input["mode"],
             "max_items": user_input["max_items"],
-            "tmdb_api_key": user_input.get("tmdb_api_key", "").strip() or None,
+            TMDB_KEY_FIELD: tmdb_api_key,
             "movie_library_section_key": (
                 movie_library_section_keys[0] if movie_library_section_keys else None
             ),
@@ -330,11 +383,29 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_tmdb(self, user_input: dict[str, Any] | None = None):
         """Configure TMDB discovery sensors."""
+        errors: dict[str, str] = {}
         if user_input is None:
-            return self.async_show_form(step_id="tmdb", data_schema=self._tmdb_schema())
+            return self.async_show_form(
+                step_id="tmdb",
+                data_schema=self._tmdb_schema(self._effective_tmdb_api_key()),
+                errors=errors,
+            )
+
+        tmdb_api_key = (
+            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
+            or self._effective_tmdb_api_key()
+        )
+        if not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key"
+            return self.async_show_form(
+                step_id="tmdb",
+                data_schema=self._tmdb_schema(self._effective_tmdb_api_key()),
+                errors=errors,
+            )
+        self._remember_tmdb_api_key(tmdb_api_key)
 
         self._data[SECTION_TMDB] = {
-            "tmdb_api_key": user_input["tmdb_api_key"].strip(),
+            TMDB_KEY_FIELD: tmdb_api_key,
             "max_items": user_input["max_items"],
             "trending": user_input["trending"],
             "now_playing": user_input["now_playing"],
@@ -353,15 +424,16 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional("setup_seer", default=True): bool,
                 vol.Optional("setup_immaculaterr", default=False): bool,
                 vol.Optional("setup_tmdb", default=False): bool,
+                vol.Optional(TMDB_KEY_FIELD, default=""): str,
             }
         )
 
-    def _seer_schema(self) -> vol.Schema:
+    def _seer_schema(self, default_tmdb_api_key: str | None = None) -> vol.Schema:
         return vol.Schema(
             {
                 vol.Required("url"): str,
                 vol.Required("api_key"): str,
-                vol.Optional("tmdb_api_key", default=""): str,
+                vol.Optional(TMDB_KEY_FIELD, default=default_tmdb_api_key or ""): str,
                 vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
                 vol.Optional("trending", default=True): bool,
                 vol.Optional("discover", default=True): bool,
@@ -373,6 +445,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def _immaculaterr_schema(
         self,
         discovered_sections: list[dict[str, str]],
+        default_tmdb_api_key: str | None = None,
     ) -> vol.Schema:
         schema: dict[Any, Any] = {
             vol.Required("url"): str,
@@ -380,7 +453,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("password"): str,
             vol.Required("mode", default="review"): vol.In(["review", "pendingApproval"]),
             vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
-            vol.Optional("tmdb_api_key", default=""): str,
+            vol.Optional(TMDB_KEY_FIELD, default=default_tmdb_api_key or ""): str,
         }
 
         movie_options = _build_section_options(discovered_sections, media_type="movie")
@@ -414,10 +487,10 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return vol.Schema(schema)
 
-    def _tmdb_schema(self) -> vol.Schema:
+    def _tmdb_schema(self, default_tmdb_api_key: str | None = None) -> vol.Schema:
         return vol.Schema(
             {
-                vol.Required("tmdb_api_key"): str,
+                vol.Required(TMDB_KEY_FIELD, default=default_tmdb_api_key or ""): str,
                 vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
                 vol.Optional("trending", default=True): bool,
                 vol.Optional("now_playing", default=True): bool,
@@ -441,10 +514,19 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _next_step(self):
         if not self._sections:
+            _apply_shared_tmdb_api_key(self._data, self._effective_tmdb_api_key())
             return self.async_create_entry(title=self._title, data=self._data)
 
         next_section = self._sections.pop(0)
         return await getattr(self, f"async_step_{next_section}")()
+
+    def _effective_tmdb_api_key(self) -> str | None:
+        return self._shared_tmdb_api_key or _extract_shared_tmdb_api_key(self._data)
+
+    def _remember_tmdb_api_key(self, tmdb_api_key: str | None) -> None:
+        normalized = _normalize_optional_text(tmdb_api_key)
+        if normalized:
+            self._shared_tmdb_api_key = normalized
 
 
 class MediarrOptionsFlow(config_entries.OptionsFlow):
@@ -455,6 +537,9 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
         self._base_config = get_entry_config(config_entry)
         self._data: dict[str, Any] = {}
         self._sections: list[str] = []
+        self._shared_tmdb_api_key: str | None = _extract_shared_tmdb_api_key(
+            self._base_config
+        )
         self._discovered_plex_sections: list[dict[str, str]] = []
         self._plex_discovery_attempted = False
 
@@ -463,6 +548,7 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
         if user_input is None:
             return self.async_show_form(step_id="init", data_schema=self._user_schema())
 
+        self._remember_tmdb_api_key(user_input.get(TMDB_KEY_FIELD))
         self._sections = self._selected_sections(user_input)
         self._data = {}
         return await self._next_step()
@@ -471,12 +557,21 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
         """Configure Seer in options."""
         defaults = self._base_config.get(SECTION_SEER) or {}
         if user_input is None:
-            return self.async_show_form(step_id="seer", data_schema=self._seer_schema(defaults))
+            return self.async_show_form(
+                step_id="seer",
+                data_schema=self._seer_schema(defaults, self._effective_tmdb_api_key()),
+            )
+
+        tmdb_api_key = (
+            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
+            or self._effective_tmdb_api_key()
+        )
+        self._remember_tmdb_api_key(tmdb_api_key)
 
         self._data[SECTION_SEER] = {
             "url": user_input["url"].strip(),
             "api_key": user_input["api_key"].strip(),
-            "tmdb_api_key": user_input.get("tmdb_api_key", "").strip() or None,
+            TMDB_KEY_FIELD: tmdb_api_key,
             "max_items": user_input["max_items"],
             "trending": user_input["trending"],
             "discover": user_input["discover"],
@@ -499,6 +594,7 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                 data_schema=self._immaculaterr_schema(
                     defaults,
                     self._discovered_plex_sections,
+                    self._effective_tmdb_api_key(),
                 ),
                 errors=errors,
             )
@@ -525,9 +621,16 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                 data_schema=self._immaculaterr_schema(
                     defaults,
                     self._discovered_plex_sections,
+                    self._effective_tmdb_api_key(),
                 ),
                 errors=errors,
             )
+
+        tmdb_api_key = (
+            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
+            or self._effective_tmdb_api_key()
+        )
+        self._remember_tmdb_api_key(tmdb_api_key)
 
         self._data[SECTION_IMMACULATERR] = {
             "url": user_input["url"].strip(),
@@ -535,7 +638,7 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
             "password": user_input["password"],
             "mode": user_input["mode"],
             "max_items": user_input["max_items"],
-            "tmdb_api_key": user_input.get("tmdb_api_key", "").strip() or None,
+            TMDB_KEY_FIELD: tmdb_api_key,
             "movie_library_section_key": (
                 movie_library_section_keys[0] if movie_library_section_keys else None
             ),
@@ -550,11 +653,29 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
     async def async_step_tmdb(self, user_input: dict[str, Any] | None = None):
         """Configure TMDB in options."""
         defaults = self._base_config.get(SECTION_TMDB) or {}
+        errors: dict[str, str] = {}
         if user_input is None:
-            return self.async_show_form(step_id="tmdb", data_schema=self._tmdb_schema(defaults))
+            return self.async_show_form(
+                step_id="tmdb",
+                data_schema=self._tmdb_schema(defaults, self._effective_tmdb_api_key()),
+                errors=errors,
+            )
+
+        tmdb_api_key = (
+            _normalize_optional_text(user_input.get(TMDB_KEY_FIELD))
+            or self._effective_tmdb_api_key()
+        )
+        if not tmdb_api_key:
+            errors["base"] = "missing_tmdb_api_key"
+            return self.async_show_form(
+                step_id="tmdb",
+                data_schema=self._tmdb_schema(defaults, self._effective_tmdb_api_key()),
+                errors=errors,
+            )
+        self._remember_tmdb_api_key(tmdb_api_key)
 
         self._data[SECTION_TMDB] = {
-            "tmdb_api_key": user_input["tmdb_api_key"].strip(),
+            TMDB_KEY_FIELD: tmdb_api_key,
             "max_items": user_input["max_items"],
             "trending": user_input["trending"],
             "now_playing": user_input["now_playing"],
@@ -579,15 +700,23 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     "setup_tmdb", default=bool(self._base_config.get(SECTION_TMDB))
                 ): bool,
+                vol.Optional(TMDB_KEY_FIELD, default=self._effective_tmdb_api_key() or ""): str,
             }
         )
 
-    def _seer_schema(self, defaults: dict[str, Any]) -> vol.Schema:
+    def _seer_schema(
+        self,
+        defaults: dict[str, Any],
+        default_tmdb_api_key: str | None = None,
+    ) -> vol.Schema:
         return vol.Schema(
             {
                 vol.Required("url", default=defaults.get("url", "")): str,
                 vol.Required("api_key", default=defaults.get("api_key", "")): str,
-                vol.Optional("tmdb_api_key", default=defaults.get("tmdb_api_key") or ""): str,
+                vol.Optional(
+                    TMDB_KEY_FIELD,
+                    default=defaults.get(TMDB_KEY_FIELD) or default_tmdb_api_key or "",
+                ): str,
                 vol.Required(
                     "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
                 ): _int_field(),
@@ -602,6 +731,7 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
         self,
         defaults: dict[str, Any],
         discovered_sections: list[dict[str, str]],
+        default_tmdb_api_key: str | None = None,
     ) -> vol.Schema:
         schema: dict[Any, Any] = {
             vol.Required("url", default=defaults.get("url", "")): str,
@@ -613,7 +743,10 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
             vol.Required(
                 "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
             ): _int_field(),
-            vol.Optional("tmdb_api_key", default=defaults.get("tmdb_api_key") or ""): str,
+            vol.Optional(
+                TMDB_KEY_FIELD,
+                default=defaults.get(TMDB_KEY_FIELD) or default_tmdb_api_key or "",
+            ): str,
         }
 
         default_movie_keys = _extract_section_keys(
@@ -666,10 +799,17 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
 
         return vol.Schema(schema)
 
-    def _tmdb_schema(self, defaults: dict[str, Any]) -> vol.Schema:
+    def _tmdb_schema(
+        self,
+        defaults: dict[str, Any],
+        default_tmdb_api_key: str | None = None,
+    ) -> vol.Schema:
         return vol.Schema(
             {
-                vol.Required("tmdb_api_key", default=defaults.get("tmdb_api_key", "")): str,
+                vol.Required(
+                    TMDB_KEY_FIELD,
+                    default=defaults.get(TMDB_KEY_FIELD) or default_tmdb_api_key or "",
+                ): str,
                 vol.Required(
                     "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
                 ): _int_field(),
@@ -705,4 +845,13 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
             else:
                 updated[section] = None
 
+        _apply_shared_tmdb_api_key(updated, self._effective_tmdb_api_key())
         return self.async_create_entry(title="", data=updated)
+
+    def _effective_tmdb_api_key(self) -> str | None:
+        return self._shared_tmdb_api_key or _extract_shared_tmdb_api_key(self._data)
+
+    def _remember_tmdb_api_key(self, tmdb_api_key: Any) -> None:
+        normalized = _normalize_optional_text(tmdb_api_key)
+        if normalized:
+            self._shared_tmdb_api_key = normalized
