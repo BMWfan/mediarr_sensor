@@ -8,30 +8,40 @@
     "step": {
       "user": {
         "title": "Mediarr einrichten",
-        "description": "Wähle die Module aus, die du über die UI konfigurieren möchtest.",
+        "description": "Wähle die Module aus, die du konfigurieren möchtest. Der TMDB-API-Key wird nur im TMDB-Modul eingegeben.",
         "data": {
           "title": "Eintragsname",
-          "setup_seer": "Seer (Overseerr/Jellyseerr) konfigurieren",
-          "setup_immaculaterr": "Immaculaterr konfigurieren",
-          "setup_tmdb": "TMDB konfigurieren",
-          "tmdb_api_key": "Gemeinsamer TMDB-API-Key (einmal eingeben)"
+          "seer": "Seer (Overseerr/Jellyseerr)",
+          "immaculaterr": "Immaculaterr",
+          "tmdb": "TMDB"
+        },
+        "data_description": {
+          "seer": "Fügt Empfehlungssensoren und Request-Aktionen aus Overseerr/Jellyseerr hinzu.",
+          "immaculaterr": "Fügt Immaculaterr-Sensoren für Film- und Serienvorschläge hinzu.",
+          "tmdb": "Konfiguriert TMDB-Sensoren und den gemeinsamen TMDB-API-Key für Anreicherung."
         }
       },
       "seer": {
         "title": "Seer",
+        "description": "Konfiguriere den Seer-Zugriff und wähle, welche Seer-Sensorgruppen aktiviert werden.",
         "data": {
           "url": "Seer-URL",
-          "api_key": "Seer-API-Key",
+          "api_key": "API-Key",
           "tmdb_enrichment": "TMDB-Anreicherung aktivieren",
           "max_items": "Maximale Einträge",
-          "trending": "Trending-Sensor aktivieren",
-          "discover": "Discover-Sensor aktivieren",
-          "popular_movies": "Beliebte Filme-Sensor aktivieren",
-          "popular_tv": "Beliebte Serien-Sensor aktivieren"
+          "trending": "Trending",
+          "discover": "Discover",
+          "popular_movies": "Beliebte Filme",
+          "popular_tv": "Beliebte Serien"
+        },
+        "data_description": {
+          "tmdb_enrichment": "Benötigt einen gültigen TMDB-API-Key im TMDB-Modul.",
+          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update."
         }
       },
       "immaculaterr": {
         "title": "Immaculaterr",
+        "description": "Verbinde Immaculaterr und lege Modus, Limits und Plex-Bibliotheken fest.",
         "data": {
           "url": "Immaculaterr-URL",
           "username": "Benutzername",
@@ -41,22 +51,36 @@
           "tmdb_enrichment": "TMDB-Anreicherung aktivieren",
           "movie_library_section_keys": "Film-Bibliotheken (automatisch erkannt)",
           "tv_library_section_keys": "TV-Bibliotheken (automatisch erkannt)",
-          "movie_library_section_key": "Film-Library-Section-Key (optional)",
-          "tv_library_section_key": "TV-Library-Section-Key (optional)"
+          "movie_library_section_key": "Film-Bibliotheksschlüssel (manuell)",
+          "tv_library_section_key": "TV-Bibliotheksschlüssel (manuell)"
+        },
+        "data_description": {
+          "mode": "Review zeigt Vorschläge zur manuellen Entscheidung. Pending Approval fokussiert ausstehende Freigaben.",
+          "tmdb_enrichment": "Benötigt einen gültigen TMDB-API-Key im TMDB-Modul.",
+          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update.",
+          "movie_library_section_keys": "Erkannte Plex-Film-Bibliotheken. Wähle eine oder mehrere aus.",
+          "tv_library_section_keys": "Erkannte Plex-TV-Bibliotheken. Wähle eine oder mehrere aus.",
+          "movie_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist.",
+          "tv_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist."
         }
       },
       "tmdb": {
         "title": "TMDB",
+        "description": "Lege den TMDB-API-Key fest und wähle die gewünschten TMDB-Sensorgruppen.",
         "data": {
           "tmdb_api_key": "TMDB-API-Key",
           "max_items": "Maximale Einträge",
-          "trending": "Trending aktivieren",
-          "now_playing": "Now Playing aktivieren",
-          "upcoming": "Upcoming aktivieren",
-          "on_air": "On Air aktivieren",
-          "airing_today": "Airing Today aktivieren",
-          "popular_movies": "Beliebte Filme aktivieren",
-          "popular_tv": "Beliebte Serien aktivieren"
+          "trending": "Trending",
+          "now_playing": "Now Playing",
+          "upcoming": "Upcoming",
+          "on_air": "On Air",
+          "airing_today": "Airing Today",
+          "popular_movies": "Beliebte Filme",
+          "popular_tv": "Beliebte Serien"
+        },
+        "data_description": {
+          "tmdb_api_key": "Dieser Key wird in Modulen mit aktivierter TMDB-Anreicherung wiederverwendet.",
+          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update."
         }
       }
     },
@@ -73,29 +97,39 @@
     "step": {
       "init": {
         "title": "Mediarr Optionen",
-        "description": "Module aktivieren und konfigurieren.",
+        "description": "Module aktivieren oder deaktivieren. Der TMDB-API-Key wird nur im TMDB-Modul bearbeitet.",
         "data": {
-          "setup_seer": "Seer (Overseerr/Jellyseerr) konfigurieren",
-          "setup_immaculaterr": "Immaculaterr konfigurieren",
-          "setup_tmdb": "TMDB konfigurieren",
-          "tmdb_api_key": "Gemeinsamer TMDB-API-Key (einmal eingeben)"
+          "seer": "Seer (Overseerr/Jellyseerr)",
+          "immaculaterr": "Immaculaterr",
+          "tmdb": "TMDB"
+        },
+        "data_description": {
+          "seer": "Fügt Empfehlungssensoren und Request-Aktionen aus Overseerr/Jellyseerr hinzu.",
+          "immaculaterr": "Fügt Immaculaterr-Sensoren für Film- und Serienvorschläge hinzu.",
+          "tmdb": "Konfiguriert TMDB-Sensoren und den gemeinsamen TMDB-API-Key für Anreicherung."
         }
       },
       "seer": {
         "title": "Seer",
+        "description": "Konfiguriere den Seer-Zugriff und wähle, welche Seer-Sensorgruppen aktiviert werden.",
         "data": {
           "url": "Seer-URL",
-          "api_key": "Seer-API-Key",
+          "api_key": "API-Key",
           "tmdb_enrichment": "TMDB-Anreicherung aktivieren",
           "max_items": "Maximale Einträge",
-          "trending": "Trending-Sensor aktivieren",
-          "discover": "Discover-Sensor aktivieren",
-          "popular_movies": "Beliebte Filme-Sensor aktivieren",
-          "popular_tv": "Beliebte Serien-Sensor aktivieren"
+          "trending": "Trending",
+          "discover": "Discover",
+          "popular_movies": "Beliebte Filme",
+          "popular_tv": "Beliebte Serien"
+        },
+        "data_description": {
+          "tmdb_enrichment": "Benötigt einen gültigen TMDB-API-Key im TMDB-Modul.",
+          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update."
         }
       },
       "immaculaterr": {
         "title": "Immaculaterr",
+        "description": "Verbinde Immaculaterr und lege Modus, Limits und Plex-Bibliotheken fest.",
         "data": {
           "url": "Immaculaterr-URL",
           "username": "Benutzername",
@@ -105,22 +139,36 @@
           "tmdb_enrichment": "TMDB-Anreicherung aktivieren",
           "movie_library_section_keys": "Film-Bibliotheken (automatisch erkannt)",
           "tv_library_section_keys": "TV-Bibliotheken (automatisch erkannt)",
-          "movie_library_section_key": "Film-Library-Section-Key (optional)",
-          "tv_library_section_key": "TV-Library-Section-Key (optional)"
+          "movie_library_section_key": "Film-Bibliotheksschlüssel (manuell)",
+          "tv_library_section_key": "TV-Bibliotheksschlüssel (manuell)"
+        },
+        "data_description": {
+          "mode": "Review zeigt Vorschläge zur manuellen Entscheidung. Pending Approval fokussiert ausstehende Freigaben.",
+          "tmdb_enrichment": "Benötigt einen gültigen TMDB-API-Key im TMDB-Modul.",
+          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update.",
+          "movie_library_section_keys": "Erkannte Plex-Film-Bibliotheken. Wähle eine oder mehrere aus.",
+          "tv_library_section_keys": "Erkannte Plex-TV-Bibliotheken. Wähle eine oder mehrere aus.",
+          "movie_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist.",
+          "tv_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist."
         }
       },
       "tmdb": {
         "title": "TMDB",
+        "description": "Lege den TMDB-API-Key fest und wähle die gewünschten TMDB-Sensorgruppen.",
         "data": {
           "tmdb_api_key": "TMDB-API-Key",
           "max_items": "Maximale Einträge",
-          "trending": "Trending aktivieren",
-          "now_playing": "Now Playing aktivieren",
-          "upcoming": "Upcoming aktivieren",
-          "on_air": "On Air aktivieren",
-          "airing_today": "Airing Today aktivieren",
-          "popular_movies": "Beliebte Filme aktivieren",
-          "popular_tv": "Beliebte Serien aktivieren"
+          "trending": "Trending",
+          "now_playing": "Now Playing",
+          "upcoming": "Upcoming",
+          "on_air": "On Air",
+          "airing_today": "Airing Today",
+          "popular_movies": "Beliebte Filme",
+          "popular_tv": "Beliebte Serien"
+        },
+        "data_description": {
+          "tmdb_api_key": "Dieser Key wird in Modulen mit aktivierter TMDB-Anreicherung wiederverwendet.",
+          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update."
         }
       }
     }

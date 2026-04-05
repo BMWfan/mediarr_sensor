@@ -21,6 +21,9 @@ from .config_helpers import get_entry_config
 SECTION_SEER = "seer"
 SECTION_IMMACULATERR = "immaculaterr"
 SECTION_TMDB = "tmdb"
+FIELD_ENABLE_SEER = "seer"
+FIELD_ENABLE_IMMACULATERR = "immaculaterr"
+FIELD_ENABLE_TMDB = "tmdb"
 TMDB_KEY_FIELD = "tmdb_api_key"
 TMDB_ENRICHMENT_FIELD = "tmdb_enrichment"
 MANAGED_SECTIONS = (SECTION_SEER, SECTION_IMMACULATERR, SECTION_TMDB)
@@ -254,6 +257,21 @@ def _int_field(min_value: int = 1, max_value: int = 250) -> Any:
     return vol.All(vol.Coerce(int), vol.Range(min=min_value, max=max_value))
 
 
+def _immaculaterr_mode_selector() -> selector.SelectSelector:
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value="review", label="Review"),
+                selector.SelectOptionDict(
+                    value="pendingApproval",
+                    label="Pending Approval",
+                ),
+            ],
+            mode=selector.SelectSelectorMode.LIST,
+        )
+    )
+
+
 class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Mediarr."""
 
@@ -282,9 +300,6 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(step_id="user", data_schema=self._user_schema())
 
         self._title = user_input.get("title", "Mediarr")
-        self._shared_tmdb_api_key = _normalize_optional_text(
-            user_input.get(TMDB_KEY_FIELD)
-        )
         self._sections = self._selected_sections(user_input)
         self._data = {}
         return await self._next_step()
@@ -437,10 +452,9 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return vol.Schema(
             {
                 vol.Optional("title", default="Mediarr"): str,
-                vol.Optional("setup_seer", default=True): bool,
-                vol.Optional("setup_immaculaterr", default=False): bool,
-                vol.Optional("setup_tmdb", default=False): bool,
-                vol.Optional(TMDB_KEY_FIELD, default=""): str,
+                vol.Optional(FIELD_ENABLE_SEER, default=True): bool,
+                vol.Optional(FIELD_ENABLE_IMMACULATERR, default=False): bool,
+                vol.Optional(FIELD_ENABLE_TMDB, default=False): bool,
             }
         )
 
@@ -468,7 +482,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required("url"): str,
             vol.Required("username"): str,
             vol.Required("password"): str,
-            vol.Required("mode", default="review"): vol.In(["review", "pendingApproval"]),
+            vol.Required("mode", default="review"): _immaculaterr_mode_selector(),
             vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
             vol.Optional(
                 TMDB_ENRICHMENT_FIELD,
@@ -524,12 +538,12 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def _selected_sections(self, user_input: dict[str, Any]) -> list[str]:
         sections: list[str] = []
-        if user_input.get("setup_seer"):
-            sections.append(SECTION_SEER)
-        if user_input.get("setup_immaculaterr"):
-            sections.append(SECTION_IMMACULATERR)
-        if user_input.get("setup_tmdb"):
+        if user_input.get(FIELD_ENABLE_TMDB):
             sections.append(SECTION_TMDB)
+        if user_input.get(FIELD_ENABLE_SEER):
+            sections.append(SECTION_SEER)
+        if user_input.get(FIELD_ENABLE_IMMACULATERR):
+            sections.append(SECTION_IMMACULATERR)
         return sections
 
     async def _next_step(self):
@@ -568,7 +582,6 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
         if user_input is None:
             return self.async_show_form(step_id="init", data_schema=self._user_schema())
 
-        self._remember_tmdb_api_key(user_input.get(TMDB_KEY_FIELD))
         self._sections = self._selected_sections(user_input)
         self._data = {}
         return await self._next_step()
@@ -727,16 +740,17 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
         return vol.Schema(
             {
                 vol.Optional(
-                    "setup_seer", default=bool(self._base_config.get(SECTION_SEER))
+                    FIELD_ENABLE_SEER,
+                    default=bool(self._base_config.get(SECTION_SEER)),
                 ): bool,
                 vol.Optional(
-                    "setup_immaculaterr",
+                    FIELD_ENABLE_IMMACULATERR,
                     default=bool(self._base_config.get(SECTION_IMMACULATERR)),
                 ): bool,
                 vol.Optional(
-                    "setup_tmdb", default=bool(self._base_config.get(SECTION_TMDB))
+                    FIELD_ENABLE_TMDB,
+                    default=bool(self._base_config.get(SECTION_TMDB)),
                 ): bool,
-                vol.Optional(TMDB_KEY_FIELD, default=self._effective_tmdb_api_key() or ""): str,
             }
         )
 
@@ -786,8 +800,8 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
             vol.Required("url", default=defaults.get("url", "")): str,
             vol.Required("username", default=defaults.get("username", "")): str,
             vol.Required("password", default=defaults.get("password", "")): str,
-            vol.Required("mode", default=defaults.get("mode", "review")): vol.In(
-                ["review", "pendingApproval"]
+            vol.Required("mode", default=defaults.get("mode", "review")): (
+                _immaculaterr_mode_selector()
             ),
             vol.Required(
                 "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
@@ -873,12 +887,12 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
 
     def _selected_sections(self, user_input: dict[str, Any]) -> list[str]:
         sections: list[str] = []
-        if user_input.get("setup_seer"):
-            sections.append(SECTION_SEER)
-        if user_input.get("setup_immaculaterr"):
-            sections.append(SECTION_IMMACULATERR)
-        if user_input.get("setup_tmdb"):
+        if user_input.get(FIELD_ENABLE_TMDB):
             sections.append(SECTION_TMDB)
+        if user_input.get(FIELD_ENABLE_SEER):
+            sections.append(SECTION_SEER)
+        if user_input.get(FIELD_ENABLE_IMMACULATERR):
+            sections.append(SECTION_IMMACULATERR)
         return sections
 
     async def _next_step(self):

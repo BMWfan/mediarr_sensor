@@ -8,55 +8,79 @@
     "step": {
       "user": {
         "title": "Set up Mediarr",
-        "description": "Choose which modules you want to configure via the UI.",
+        "description": "Choose the modules you want to configure. The TMDB API key is only entered in the TMDB module.",
         "data": {
           "title": "Entry name",
-          "setup_seer": "Configure Seer (Overseerr/Jellyseerr)",
-          "setup_immaculaterr": "Configure Immaculaterr",
-          "setup_tmdb": "Configure TMDB",
-          "tmdb_api_key": "Shared TMDB API key (enter once)"
+          "seer": "Seer (Overseerr/Jellyseerr)",
+          "immaculaterr": "Immaculaterr",
+          "tmdb": "TMDB"
+        },
+        "data_description": {
+          "seer": "Adds recommendation sensors and request actions from Overseerr/Jellyseerr.",
+          "immaculaterr": "Adds Immaculaterr movie and TV suggestion sensors.",
+          "tmdb": "Configures TMDB sensors and the shared TMDB API key for enrichment."
         }
       },
       "seer": {
         "title": "Seer",
+        "description": "Configure Seer access and choose which Seer sensor groups should be enabled.",
         "data": {
           "url": "Seer URL",
-          "api_key": "Seer API key",
+          "api_key": "API key",
           "tmdb_enrichment": "Enable TMDB enrichment",
-          "max_items": "Max items",
-          "trending": "Enable trending sensor",
-          "discover": "Enable discover sensor",
-          "popular_movies": "Enable popular movies sensor",
-          "popular_tv": "Enable popular TV sensor"
+          "max_items": "Maximum items",
+          "trending": "Trending",
+          "discover": "Discover",
+          "popular_movies": "Popular movies",
+          "popular_tv": "Popular TV"
+        },
+        "data_description": {
+          "tmdb_enrichment": "Requires a valid TMDB API key in the TMDB module.",
+          "max_items": "Maximum number of items returned per sensor update."
         }
       },
       "immaculaterr": {
         "title": "Immaculaterr",
+        "description": "Connect to Immaculaterr and choose mode, limits, and Plex libraries.",
         "data": {
           "url": "Immaculaterr URL",
           "username": "Username",
           "password": "Password",
           "mode": "Mode",
-          "max_items": "Max items",
+          "max_items": "Maximum items",
           "tmdb_enrichment": "Enable TMDB enrichment",
           "movie_library_section_keys": "Movie libraries (auto-detected)",
           "tv_library_section_keys": "TV libraries (auto-detected)",
-          "movie_library_section_key": "Movie library section key (optional)",
-          "tv_library_section_key": "TV library section key (optional)"
+          "movie_library_section_key": "Movie library section key (manual)",
+          "tv_library_section_key": "TV library section key (manual)"
+        },
+        "data_description": {
+          "mode": "Review shows suggestions for manual decisions. Pending Approval focuses on pending approvals.",
+          "tmdb_enrichment": "Requires a valid TMDB API key in the TMDB module.",
+          "max_items": "Maximum number of items returned per sensor update.",
+          "movie_library_section_keys": "Detected Plex movie libraries. Select one or more.",
+          "tv_library_section_keys": "Detected Plex TV libraries. Select one or more.",
+          "movie_library_section_key": "Use only if auto-detection is unavailable.",
+          "tv_library_section_key": "Use only if auto-detection is unavailable."
         }
       },
       "tmdb": {
         "title": "TMDB",
+        "description": "Set the TMDB API key and choose which TMDB sensor groups should be enabled.",
         "data": {
           "tmdb_api_key": "TMDB API key",
-          "max_items": "Max items",
-          "trending": "Enable trending",
-          "now_playing": "Enable now playing",
-          "upcoming": "Enable upcoming",
-          "on_air": "Enable on air",
-          "airing_today": "Enable airing today",
-          "popular_movies": "Enable popular movies",
-          "popular_tv": "Enable popular TV"
+          "max_items": "Maximum items",
+          "trending": "Trending",
+          "now_playing": "Now playing",
+          "upcoming": "Upcoming",
+          "on_air": "On air",
+          "airing_today": "Airing today",
+          "popular_movies": "Popular movies",
+          "popular_tv": "Popular TV"
+        },
+        "data_description": {
+          "tmdb_api_key": "This key is reused by modules that enable TMDB enrichment.",
+          "max_items": "Maximum number of items returned per sensor update."
         }
       }
     },
@@ -73,54 +97,78 @@
     "step": {
       "init": {
         "title": "Mediarr options",
-        "description": "Enable and configure modules.",
+        "description": "Enable or disable modules. The TMDB API key is only edited in the TMDB module.",
         "data": {
-          "setup_seer": "Configure Seer (Overseerr/Jellyseerr)",
-          "setup_immaculaterr": "Configure Immaculaterr",
-          "setup_tmdb": "Configure TMDB",
-          "tmdb_api_key": "Shared TMDB API key (enter once)"
+          "seer": "Seer (Overseerr/Jellyseerr)",
+          "immaculaterr": "Immaculaterr",
+          "tmdb": "TMDB"
+        },
+        "data_description": {
+          "seer": "Adds recommendation sensors and request actions from Overseerr/Jellyseerr.",
+          "immaculaterr": "Adds Immaculaterr movie and TV suggestion sensors.",
+          "tmdb": "Configures TMDB sensors and the shared TMDB API key for enrichment."
         }
       },
       "seer": {
         "title": "Seer",
+        "description": "Configure Seer access and choose which Seer sensor groups should be enabled.",
         "data": {
           "url": "Seer URL",
-          "api_key": "Seer API key",
+          "api_key": "API key",
           "tmdb_enrichment": "Enable TMDB enrichment",
-          "max_items": "Max items",
-          "trending": "Enable trending sensor",
-          "discover": "Enable discover sensor",
-          "popular_movies": "Enable popular movies sensor",
-          "popular_tv": "Enable popular TV sensor"
+          "max_items": "Maximum items",
+          "trending": "Trending",
+          "discover": "Discover",
+          "popular_movies": "Popular movies",
+          "popular_tv": "Popular TV"
+        },
+        "data_description": {
+          "tmdb_enrichment": "Requires a valid TMDB API key in the TMDB module.",
+          "max_items": "Maximum number of items returned per sensor update."
         }
       },
       "immaculaterr": {
         "title": "Immaculaterr",
+        "description": "Connect to Immaculaterr and choose mode, limits, and Plex libraries.",
         "data": {
           "url": "Immaculaterr URL",
           "username": "Username",
           "password": "Password",
           "mode": "Mode",
-          "max_items": "Max items",
+          "max_items": "Maximum items",
           "tmdb_enrichment": "Enable TMDB enrichment",
           "movie_library_section_keys": "Movie libraries (auto-detected)",
           "tv_library_section_keys": "TV libraries (auto-detected)",
-          "movie_library_section_key": "Movie library section key (optional)",
-          "tv_library_section_key": "TV library section key (optional)"
+          "movie_library_section_key": "Movie library section key (manual)",
+          "tv_library_section_key": "TV library section key (manual)"
+        },
+        "data_description": {
+          "mode": "Review shows suggestions for manual decisions. Pending Approval focuses on pending approvals.",
+          "tmdb_enrichment": "Requires a valid TMDB API key in the TMDB module.",
+          "max_items": "Maximum number of items returned per sensor update.",
+          "movie_library_section_keys": "Detected Plex movie libraries. Select one or more.",
+          "tv_library_section_keys": "Detected Plex TV libraries. Select one or more.",
+          "movie_library_section_key": "Use only if auto-detection is unavailable.",
+          "tv_library_section_key": "Use only if auto-detection is unavailable."
         }
       },
       "tmdb": {
         "title": "TMDB",
+        "description": "Set the TMDB API key and choose which TMDB sensor groups should be enabled.",
         "data": {
           "tmdb_api_key": "TMDB API key",
-          "max_items": "Max items",
-          "trending": "Enable trending",
-          "now_playing": "Enable now playing",
-          "upcoming": "Enable upcoming",
-          "on_air": "Enable on air",
-          "airing_today": "Enable airing today",
-          "popular_movies": "Enable popular movies",
-          "popular_tv": "Enable popular TV"
+          "max_items": "Maximum items",
+          "trending": "Trending",
+          "now_playing": "Now playing",
+          "upcoming": "Upcoming",
+          "on_air": "On air",
+          "airing_today": "Airing today",
+          "popular_movies": "Popular movies",
+          "popular_tv": "Popular TV"
+        },
+        "data_description": {
+          "tmdb_api_key": "This key is reused by modules that enable TMDB enrichment.",
+          "max_items": "Maximum number of items returned per sensor update."
         }
       }
     }
