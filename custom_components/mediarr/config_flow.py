@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from urllib.parse import urlparse
 import xml.etree.ElementTree as ET
 
 import aiohttp
@@ -69,6 +70,39 @@ def _filter_keys_to_options(
         return keys
     allowed = {str(option["value"]) for option in options}
     return [key for key in keys if key in allowed]
+
+
+def _host_from_url(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        parsed = urlparse(value)
+    except Exception:
+        return None
+    host = (parsed.hostname or "").strip()
+    return host or None
+
+
+def _friendly_plex_source_name(
+    entry: config_entries.ConfigEntry,
+    base_url: str | None,
+) -> str:
+    direct_name = _normalize_optional_text(entry.data.get("server"))
+    if direct_name:
+        return direct_name
+
+    title = _normalize_optional_text(entry.title)
+    if title:
+        title_host = _host_from_url(title)
+        if title_host:
+            return title_host
+        return title
+
+    base_host = _host_from_url(base_url)
+    if base_host:
+        return base_host
+
+    return "Plex"
 
 
 def _is_movie_section(section_type: str) -> bool:
@@ -181,7 +215,7 @@ async def _async_discover_plex_sections(hass: HomeAssistant) -> list[dict[str, s
             if dedupe_key in seen:
                 continue
             seen.add(dedupe_key)
-            section["source"] = entry.title
+            section["source"] = _friendly_plex_source_name(entry, base_url)
             discovered.append(section)
 
     return discovered
