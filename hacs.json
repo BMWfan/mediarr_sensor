@@ -2,7 +2,7 @@
   "name": "Mediarr",
   "render_readme": true,
 
-  "domains": ["sensor"],
+  "domains": ["mediarr"],
   "country": "ALL",
   "homeassistant": "2024.1.0"
 }
