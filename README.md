@@ -3,7 +3,7 @@ Support This Project If you find this project helpful, please consider supportin
 
 # Mediarr for Home Assistant (inspired by upcoming media card) https://github.com/Vansmak/mediarr-card
 ## Services
-This integration provides services to interact with Overseerr/Jellyseerr. While the various trending/discover sensors and frontend card are optional, the base seer sensor is required to enable the services.
+This integration provides services to interact with Overseerr/Jellyseerr and Immaculaterr Observatory. While the various trending/discover sensors and frontend card are optional, the related credentials must be configured when you want button actions from Home Assistant.
 
 ### Minimum Required Configuration just to have overseer\jellyseer request services from ha
 To use the seer request services, add this to your configuration.yaml:
@@ -22,6 +22,16 @@ sensor:
       url: your_seerr_url
       api_key: your_api_key
 ```      
+
+To use the Immaculaterr approve/reject/apply service, add this to your `configuration.yaml`:
+
+```yaml
+mediarr:
+  immaculaterr:
+    url: http://your_immaculaterr_host:5454
+    username: your_username
+    password: !secret immaculaterr_password
+```
 
 ## Installation
 
@@ -122,11 +132,22 @@ sensor:
         min_year: 2020  # Only show content from 2020 onwards
         exclude_talk_shows: true
         exclude_genres: [10763, 10764, 10767]
+
+    immaculaterr:  # Optional
+      url: http://your_immaculaterr_host:5454
+      username: your_username
+      password: !secret immaculaterr_password
+      max_items: 45
+      mode: review  # Optional: review or pendingApproval
+      tmdb_api_key: "your_tmdb_api_key"  # Optional, used for overview/backdrop enrichment
+      movie_library_section_key: "1"  # Optional
+      tv_library_section_key: "2"     # Optional
 ```
 # Sensor Configuration
 - **max_items**: Number of items to display (default: 45)
 - **days_to_check**: Days to look ahead for upcoming content (Sonarr only, default: 90)
 - **trending_type**: Content type to display for Trakt and TMDB
+- **mode**: For Immaculaterr Observatory sensors, use `review` for the suggestion feed or `pendingApproval` for approval queues
 - Available Filters
 
 - hide_existing: Toggle library content filtering (default: true)

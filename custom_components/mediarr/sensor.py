@@ -3,6 +3,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from . import DOMAIN
 from .discovery.tmdb import TMDB_ENDPOINTS
 from .common.const import (
     CONF_MAX_ITEMS, 
@@ -87,36 +88,36 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         tmdb_config = config["tmdb"]
         tmdb_api_key = tmdb_config.get("tmdb_api_key")
         filters = tmdb_config.get("filters", {})
-    
-    # Standard endpoints
-    for endpoint in ['trending', 'now_playing', 'upcoming', 'on_air', 'airing_today']:
-        if tmdb_config.get(endpoint, False):
+
+        # Standard endpoints
+        for endpoint in ['trending', 'now_playing', 'upcoming', 'on_air', 'airing_today']:
+            if tmdb_config.get(endpoint, False):
+                sensors.append(TMDBMediarrSensor(
+                    session,
+                    tmdb_api_key,
+                    tmdb_config.get("max_items", DEFAULT_MAX_ITEMS),
+                    endpoint,
+                    filters
+                ))
+
+        # New endpoints for popular content
+        if tmdb_config.get("popular_movies", False):
             sensors.append(TMDBMediarrSensor(
                 session,
                 tmdb_api_key,
                 tmdb_config.get("max_items", DEFAULT_MAX_ITEMS),
-                endpoint,
+                "popular_movies",
                 filters
             ))
-    
-    # New endpoints for popular content
-    if tmdb_config.get("popular_movies", False):
-        sensors.append(TMDBMediarrSensor(
-            session,
-            tmdb_api_key,
-            tmdb_config.get("max_items", DEFAULT_MAX_ITEMS),
-            "popular_movies",
-            filters
-        ))
-    
-    if tmdb_config.get("popular_tv", False):
-        sensors.append(TMDBMediarrSensor(
-            session,
-            tmdb_api_key,
-            tmdb_config.get("max_items", DEFAULT_MAX_ITEMS),
-            "popular_tv",
-            filters
-        ))
+
+        if tmdb_config.get("popular_tv", False):
+            sensors.append(TMDBMediarrSensor(
+                session,
+                tmdb_api_key,
+                tmdb_config.get("max_items", DEFAULT_MAX_ITEMS),
+                "popular_tv",
+                filters
+            ))
 
     if "seer" in config:
         from .services.seer import SeerMediarrSensor
@@ -181,6 +182,56 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 None,
                 filters  # Pass filters to the sensor
             ))
+
+    if "immaculaterr" in config:
+        from .services.immaculaterr import ImmaculaterrMediarrSensor
+        from .services.immaculaterr_requests import (
+            ImmaculaterrRequestHandler,
+            async_setup_immaculaterr_services,
+        )
+
+        immaculaterr_config = config["immaculaterr"]
+        movie_library_section_key = (
+            immaculaterr_config.get("movie_library_section_key")
+            or immaculaterr_config.get("movies_library_section_key")
+        )
+        tv_library_section_key = immaculaterr_config.get("tv_library_section_key")
+        mode = immaculaterr_config.get("mode", "review")
+        tmdb_api_key = immaculaterr_config.get("tmdb_api_key")
+        max_items = immaculaterr_config.get("max_items", DEFAULT_MAX_ITEMS)
+
+        if movie_library_section_key:
+            sensors.append(ImmaculaterrMediarrSensor(
+                immaculaterr_config["url"],
+                immaculaterr_config["username"],
+                immaculaterr_config["password"],
+                "movie",
+                str(movie_library_section_key),
+                max_items,
+                mode,
+                tmdb_api_key,
+            ))
+
+        if tv_library_section_key:
+            sensors.append(ImmaculaterrMediarrSensor(
+                immaculaterr_config["url"],
+                immaculaterr_config["username"],
+                immaculaterr_config["password"],
+                "tv",
+                str(tv_library_section_key),
+                max_items,
+                mode,
+                tmdb_api_key,
+            ))
+
+        hass.data.setdefault(DOMAIN, {})
+        if "immaculaterr_request_handler" not in hass.data[DOMAIN]:
+            hass.data[DOMAIN]["immaculaterr_request_handler"] = ImmaculaterrRequestHandler(
+                immaculaterr_config["url"],
+                immaculaterr_config["username"],
+                immaculaterr_config["password"],
+            )
+            await async_setup_immaculaterr_services(hass, DOMAIN)
 
     if sensors:
         if "mediarr_sensors" not in hass.data:

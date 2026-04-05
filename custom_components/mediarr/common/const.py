@@ -35,12 +35,18 @@ SEER_TV_DETAILS_ENDPOINT = "/api/v1/tv"
 SERVICE_MOVIE_REQUEST = "submit_movie_request"
 SERVICE_TV_REQUEST = "submit_tv_request"
 SERVICE_UPDATE_REQUEST = "update_request"
+SERVICE_PROCESS_IMMACULATERR_SUGGESTION = "process_immaculaterr_suggestion"
 
 ATTR_REQUEST_NAME = "name"
 ATTR_REQUEST_TYPE = "type"
 ATTR_REQUEST_STATUS = "new_status"
 ATTR_REQUEST_ID = "request_id"
 ATTR_REQUEST_SEASON = "season"
+ATTR_MEDIA_TYPE = "media_type"
+ATTR_LIBRARY_SECTION_KEY = "library_section_key"
+ATTR_SUGGESTION_ID = "suggestion_id"
+ATTR_SUGGESTION_ACTION = "action"
+ATTR_APPLY_IMMEDIATELY = "apply"
 
 # Request Status
 REQUEST_STATUS_APPROVED = "approve"
