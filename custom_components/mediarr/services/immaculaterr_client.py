@@ -31,14 +31,25 @@ class ImmaculaterrClient:
         self._authenticated = False
         self._auth_lock = asyncio.Lock()
 
+    @staticmethod
+    def _base_headers() -> dict[str, str]:
+        """Headers required by Immaculaterr's origin-check middleware."""
+        return {
+            "X-Requested-With": "XMLHttpRequest",
+        }
+
     async def _login(self) -> None:
         """Authenticate and persist the session cookie in the jar."""
         payload = {"username": self._username, "password": self._password}
+        headers = {
+            **self._base_headers(),
+            "Content-Type": "application/json",
+        }
         async with async_timeout.timeout(10):
             async with self._session.post(
                 f"{self._url}/api/auth/login",
                 json=payload,
-                headers={"Content-Type": "application/json"},
+                headers=headers,
             ) as response:
                 if response.status not in (200, 201):
                     response_text = await response.text()
@@ -69,7 +80,10 @@ class ImmaculaterrClient:
         """Issue an authenticated request and return JSON."""
         await self._ensure_authenticated()
 
-        headers = {"Accept": "application/json"}
+        headers = {
+            **self._base_headers(),
+            "Accept": "application/json",
+        }
         if json_data is not None:
             headers["Content-Type"] = "application/json"
 
