@@ -44,6 +44,10 @@ mediarr:
 6. Find and install "Mediarr" from HACS
 7. Restart Home Assistant
 
+Note: this repository is currently intended to be added as a `Custom repository`. It is not part of the default HACS catalog, so it will not appear in the normal HACS search until you add the repository URL manually.
+
+This integration is YAML-based. After installing it with HACS, configure `mediarr:` and/or the `sensor:` platform in `configuration.yaml`; it does not show up through Home Assistant's "Add integration" flow.
+
 
 ### Manual Installation
 1. Download the latest  before hacs (can break)

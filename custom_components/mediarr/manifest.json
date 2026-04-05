@@ -1,8 +1,8 @@
 {
   "domain": "mediarr",
   "name": "Mediarr",
-  "documentation": "https://github.com/vansmak/mediarr_sensor",
-  "issue_tracker": "https://github.com/vansmak/mediarr_sensor/issues",
+  "documentation": "https://github.com/BMWfan/mediarr_sensor",
+  "issue_tracker": "https://github.com/BMWfan/mediarr_sensor/issues",
   "dependencies": [],
   "codeowners": ["@vansmak"],
   "requirements": [
