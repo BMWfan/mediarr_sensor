@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
+import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -12,6 +13,45 @@ from .common.const import (
     DEFAULT_DAYS,
     DEFAULT_MAX_ITEMS,
 )
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def _normalize_section_keys(raw_value: Any) -> list[str]:
+    if raw_value is None:
+        return []
+
+    if isinstance(raw_value, (list, tuple, set)):
+        values = list(raw_value)
+    else:
+        values = [raw_value]
+
+    keys: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        key = str(value).strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        keys.append(key)
+    return keys
+
+
+def _extract_section_keys(
+    config: dict[str, Any],
+    *,
+    singular_key: str,
+    plural_key: str,
+    legacy_alias: str | None = None,
+) -> list[str]:
+    keys = _normalize_section_keys(config.get(plural_key))
+    singular_value = config.get(singular_key)
+    if singular_value is None and legacy_alias:
+        singular_value = config.get(legacy_alias)
+    for key in _normalize_section_keys(singular_value):
+        if key not in keys:
+            keys.insert(0, key)
+    return keys
 
 
 async def _async_build_sensors(
@@ -197,34 +237,45 @@ async def _async_build_sensors(
     immaculaterr_config = config.get("immaculaterr")
     if immaculaterr_config:
         from .services.immaculaterr import ImmaculaterrMediarrSensor
-        movie_library_section_key = (
-            immaculaterr_config.get("movie_library_section_key")
-            or immaculaterr_config.get("movies_library_section_key")
+        movie_library_section_keys = _extract_section_keys(
+            immaculaterr_config,
+            singular_key="movie_library_section_key",
+            plural_key="movie_library_section_keys",
+            legacy_alias="movies_library_section_key",
         )
-        tv_library_section_key = immaculaterr_config.get("tv_library_section_key")
+        tv_library_section_keys = _extract_section_keys(
+            immaculaterr_config,
+            singular_key="tv_library_section_key",
+            plural_key="tv_library_section_keys",
+        )
         mode = immaculaterr_config.get("mode", "review")
         tmdb_api_key = immaculaterr_config.get("tmdb_api_key")
         max_items = immaculaterr_config.get("max_items", DEFAULT_MAX_ITEMS)
+        if not movie_library_section_keys and not tv_library_section_keys:
+            _LOGGER.warning(
+                "Immaculaterr configured but no library section key set. "
+                "Set movie_library_section_key and/or tv_library_section_key."
+            )
 
-        if movie_library_section_key:
+        for movie_library_section_key in movie_library_section_keys:
             sensors.append(ImmaculaterrMediarrSensor(
                 immaculaterr_config["url"],
                 immaculaterr_config["username"],
                 immaculaterr_config["password"],
                 "movie",
-                str(movie_library_section_key),
+                movie_library_section_key,
                 max_items,
                 mode,
                 tmdb_api_key,
             ))
 
-        if tv_library_section_key:
+        for tv_library_section_key in tv_library_section_keys:
             sensors.append(ImmaculaterrMediarrSensor(
                 immaculaterr_config["url"],
                 immaculaterr_config["username"],
                 immaculaterr_config["password"],
                 "tv",
-                str(tv_library_section_key),
+                tv_library_section_key,
                 max_items,
                 mode,
                 tmdb_api_key,

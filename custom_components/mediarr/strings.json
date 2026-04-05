@@ -1,5 +1,8 @@
 {
   "config": {
+    "error": {
+      "missing_library_section_key": "Set at least one library section key (movie or TV)."
+    },
     "step": {
       "user": {
         "title": "Set up Mediarr",
@@ -33,6 +36,8 @@
           "mode": "Mode",
           "max_items": "Max items",
           "tmdb_api_key": "TMDB API key (optional)",
+          "movie_library_section_keys": "Movie libraries (auto-detected)",
+          "tv_library_section_keys": "TV libraries (auto-detected)",
           "movie_library_section_key": "Movie library section key (optional)",
           "tv_library_section_key": "TV library section key (optional)"
         }
@@ -57,6 +62,9 @@
     }
   },
   "options": {
+    "error": {
+      "missing_library_section_key": "Set at least one library section key (movie or TV)."
+    },
     "step": {
       "init": {
         "title": "Mediarr options",
@@ -89,6 +97,8 @@
           "mode": "Mode",
           "max_items": "Max items",
           "tmdb_api_key": "TMDB API key (optional)",
+          "movie_library_section_keys": "Movie libraries (auto-detected)",
+          "tv_library_section_keys": "TV libraries (auto-detected)",
           "movie_library_section_key": "Movie library section key (optional)",
           "tv_library_section_key": "TV library section key (optional)"
         }
