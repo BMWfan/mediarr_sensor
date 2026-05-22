@@ -101,29 +101,22 @@ class JellyfinWebSocket:
     async def _listen(self):
         """Listen for WebSocket messages."""
         try:
-            async with async_timeout.timeout(30):  # Add timeout
-                async for msg in self._ws:
-                    if msg.type == aiohttp.WSMsgType.TEXT:
-                        data = json.loads(msg.data)
-                        
-                        # Handle different message types
-                        if data.get("MessageType") == "Library":
-                            # Library changed, trigger an update
-                            if "ItemsAdded" in data.get("Data", {}) or "ItemsRemoved" in data.get("Data", {}):
-                                _LOGGER.debug("Library changed, triggering update")
-                                await self._sensor.async_update()
-                                
-                        elif data.get("MessageType") == "ForceKeepAlive":
-                            # Respond to keep-alive messages
-                            await self._ws.send_str(json.dumps({
-                                "MessageType": "KeepAlive"
-                            }))
-                    elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
-                        _LOGGER.warning("WebSocket connection closed or error")
-                        break
+            async for msg in self._ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    data = json.loads(msg.data)
 
-        except asyncio.TimeoutError:
-            _LOGGER.warning("WebSocket listener timeout")
+                    if data.get("MessageType") == "Library":
+                        if "ItemsAdded" in data.get("Data", {}) or "ItemsRemoved" in data.get("Data", {}):
+                            _LOGGER.debug("Library changed, triggering update")
+                            await self._sensor.async_update()
+
+                    elif data.get("MessageType") == "ForceKeepAlive":
+                        await self._ws.send_str(json.dumps({"MessageType": "KeepAlive"}))
+
+                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                    _LOGGER.warning("WebSocket connection closed or error")
+                    break
+
         except Exception as err:
             _LOGGER.error("WebSocket listener error: %s", err)
         finally:
@@ -170,7 +163,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
     @callback
     def _update_callback(self, now):
         """Handle the update interval callback."""
-        self.hass.loop.create_task(self.async_update())
+        self.hass.async_create_task(self.async_update())
 
     async def async_added_to_hass(self):
         """Handle entity which will be added."""
@@ -190,10 +183,19 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
 
         # Set up periodic updates as fallback
         self._remove_update_interval = async_track_time_interval(
-            self.hass, 
-            self._update_callback,  # Use the callback method
+            self.hass,
+            self._update_callback,
             UPDATE_INTERVAL
         )
+
+    async def async_will_remove_from_hass(self):
+        """Clean up resources when entity is removed."""
+        if self._remove_update_interval:
+            self._remove_update_interval()
+            self._remove_update_interval = None
+        if self._ws_client:
+            await self._ws_client.cleanup()
+            self._ws_client = None
 
     @property
     def name(self):
@@ -252,27 +254,31 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
         return None
     async def _download_and_cache_image(self, url, item_id, image_type):
         """Download and cache an image from Jellyfin."""
+        file_name = f"{item_id}_{image_type}.jpg"
+        cache_dir = Path(self.hass.config.path("www/mediarr/cache"))
+        cached_path = cache_dir / file_name
+
+        if await self.hass.async_add_executor_job(cached_path.exists):
+            return f"/local/mediarr/cache/{file_name}"
+
         try:
             headers = {
                 "Authorization": f'MediaBrowser Token="{self._jellyfin_token}"',
                 "Accept": "image/jpeg"
             }
-            
+
             async with async_timeout.timeout(10):
                 async with self._session.get(url, headers=headers) as response:
                     if response.status == 200:
-                        cache_dir = Path(self.hass.config.path("www/mediarr/cache"))
-                        cache_dir.mkdir(parents=True, exist_ok=True)
-                        
-                        file_name = f"{item_id}_{image_type}.jpg"
-                        cached_path = cache_dir / file_name
-                        
+                        await self.hass.async_add_executor_job(
+                            lambda: cache_dir.mkdir(parents=True, exist_ok=True)
+                        )
+
                         content = await response.read()
-                        
-                        # Use aiofiles for async file operations
+
                         async with aiofiles.open(cached_path, 'wb') as f:
                             await f.write(content)
-                            
+
                         _LOGGER.debug("Successfully cached image for %s: %s", item_id, image_type)
                         return f"/local/mediarr/cache/{file_name}"
                     else:
@@ -281,21 +287,24 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
             _LOGGER.error("Error caching image %s for %s: %s", image_type, item_id, err)
         return None
 
-    def _clean_unused_images(self, current_ids):
+    async def _clean_unused_images(self, current_ids):
         """Clean up cached images that aren't in the current item list."""
         try:
             cache_dir = Path(self.hass.config.path("www/mediarr/cache"))
-            if not cache_dir.exists():
+            if not await self.hass.async_add_executor_job(cache_dir.exists):
                 return
 
-            for image_file in cache_dir.glob("*.jpg"):
-                item_id = image_file.stem.split('_')[0]
-                if item_id not in current_ids:
-                    try:
-                        image_file.unlink()
-                        _LOGGER.debug("Removed unused image: %s", image_file.name)
-                    except Exception as err:
-                        _LOGGER.error("Error removing image %s: %s", image_file.name, err)
+            def _do_cleanup():
+                for image_file in cache_dir.glob("*.jpg"):
+                    item_id = image_file.stem.split('_')[0]
+                    if item_id not in current_ids:
+                        try:
+                            image_file.unlink()
+                            _LOGGER.debug("Removed unused image: %s", image_file.name)
+                        except Exception as err:
+                            _LOGGER.error("Error removing image %s: %s", image_file.name, err)
+
+            await self.hass.async_add_executor_job(_do_cleanup)
         except Exception as err:
             _LOGGER.error("Error cleaning cached images: %s", err)
 
@@ -533,7 +542,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                 recently_added.append(show_data)
 
             # Clean up unused cached images
-            self._clean_unused_images(current_item_ids)
+            await self._clean_unused_images(current_item_ids)
 
             # Sort by added date instead of release date
             recently_added.sort(key=lambda x: x.get('added_at', '') or x.get('added', ''), reverse=True)

@@ -4,7 +4,14 @@
       "missing_library_section_key": "Set at least one library section key (movie or TV).",
       "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors.",
       "missing_tmdb_api_key_for_module": "Enable shared TMDB API key first, then enable TMDB enrichment for this module.",
-      "missing_tmdb_api_key_for_dependency": "Set a TMDB API key in the TMDB module first."
+      "missing_tmdb_api_key_for_dependency": "Set a TMDB API key in the TMDB module first.",
+      "missing_ha_plex_entry": "No Home Assistant Plex connection found. Set up the official Plex integration first or choose Plex account login.",
+      "plex_pin_init_failed": "Could not start Plex login. Please try again.",
+      "plex_pin_poll_failed": "Could not verify Plex login. Please try again.",
+      "plex_auth_pending": "Plex login is not completed yet. Finish login in your browser and submit again.",
+      "plex_server_fetch_failed": "Could not load Plex servers for this account.",
+      "plex_no_servers_found": "No Plex server found for this account.",
+      "plex_invalid_server_selection": "Please select a valid Plex server."
     },
     "step": {
       "user": {
@@ -100,15 +107,41 @@
       },
       "plex": {
         "title": "Plex",
-        "description": "Connect Plex for the recently added sensor.",
+        "description": "Connect Plex for the recently added sensor. Choose Home Assistant Plex integration or Plex account login.\nToken status: {token_status}",
         "data": {
-          "url": "Plex URL",
-          "token": "Plex token",
+          "auth_method": "Connection method",
+          "plex_entry_id": "Plex server",
           "max_items": "Maximum items",
           "language": "TMDB language"
         },
         "data_description": {
+          "auth_method": "Home Assistant Plex integration is recommended. Plex account login uses the official Plex PIN flow.",
+          "plex_entry_id": "Select which configured Plex server should be used.",
           "language": "Language code used for TMDB metadata, for example en or de."
+        }
+      },
+      "plex_login": {
+        "title": "Plex Authentication",
+        "description": "Choose OAuth to generate/refresh a Plex token.\nChoose Skip only when a valid token already exists from a previous setup.",
+        "data": {
+          "token_display": "Current token (read-only)",
+          "auth_action": "Action"
+        },
+        "data_description": {
+          "token_display": "Display-only token preview. Manual changes are ignored.",
+          "auth_action": "OAuth starts Plex login. Skip continues with the current token."
+        }
+      },
+      "plex_login_wait": {
+        "title": "Plex Authentication",
+        "description": "Open this URL in your browser and sign in:\n{auth_url}\nCode: {pin_code}\nAfter authorizing, return here and click OK.",
+        "data": {}
+      },
+      "plex_server": {
+        "title": "Select Plex server",
+        "description": "Choose which Plex server should be used by Mediarr.",
+        "data": {
+          "server_index": "Plex server"
         }
       },
       "jellyfin": {
@@ -184,7 +217,14 @@
       "missing_library_section_key": "Set at least one library section key (movie or TV).",
       "missing_tmdb_api_key": "Set a TMDB API key for TMDB sensors.",
       "missing_tmdb_api_key_for_module": "Enable shared TMDB API key first, then enable TMDB enrichment for this module.",
-      "missing_tmdb_api_key_for_dependency": "Set a TMDB API key in the TMDB module first."
+      "missing_tmdb_api_key_for_dependency": "Set a TMDB API key in the TMDB module first.",
+      "missing_ha_plex_entry": "No Home Assistant Plex connection found. Set up the official Plex integration first or choose Plex account login.",
+      "plex_pin_init_failed": "Could not start Plex login. Please try again.",
+      "plex_pin_poll_failed": "Could not verify Plex login. Please try again.",
+      "plex_auth_pending": "Plex login is not completed yet. Finish login in your browser and submit again.",
+      "plex_server_fetch_failed": "Could not load Plex servers for this account.",
+      "plex_no_servers_found": "No Plex server found for this account.",
+      "plex_invalid_server_selection": "Please select a valid Plex server."
     },
     "step": {
       "init": {
@@ -279,15 +319,41 @@
       },
       "plex": {
         "title": "Plex",
-        "description": "Connect Plex for the recently added sensor.",
+        "description": "Connect Plex for the recently added sensor. Choose Home Assistant Plex integration or Plex account login.\nToken status: {token_status}",
         "data": {
-          "url": "Plex URL",
-          "token": "Plex token",
+          "auth_method": "Connection method",
+          "plex_entry_id": "Plex server",
           "max_items": "Maximum items",
           "language": "TMDB language"
         },
         "data_description": {
+          "auth_method": "Home Assistant Plex integration is recommended. Plex account login uses the official Plex PIN flow.",
+          "plex_entry_id": "Select which configured Plex server should be used.",
           "language": "Language code used for TMDB metadata, for example en or de."
+        }
+      },
+      "plex_login": {
+        "title": "Plex Authentication",
+        "description": "Choose OAuth to generate/refresh a Plex token.\nChoose Skip only when a valid token already exists from a previous setup.",
+        "data": {
+          "token_display": "Current token (read-only)",
+          "auth_action": "Action"
+        },
+        "data_description": {
+          "token_display": "Display-only token preview. Manual changes are ignored.",
+          "auth_action": "OAuth starts Plex login. Skip continues with the current token."
+        }
+      },
+      "plex_login_wait": {
+        "title": "Plex Authentication",
+        "description": "Open this URL in your browser and sign in:\n{auth_url}\nCode: {pin_code}\nAfter authorizing, return here and click OK.",
+        "data": {}
+      },
+      "plex_server": {
+        "title": "Select Plex server",
+        "description": "Choose which Plex server should be used by Mediarr.",
+        "data": {
+          "server_index": "Plex server"
         }
       },
       "jellyfin": {

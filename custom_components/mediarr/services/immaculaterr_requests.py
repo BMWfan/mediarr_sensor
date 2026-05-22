@@ -14,6 +14,7 @@ from ..common.const import (
     ATTR_SUGGESTION_ACTION,
     ATTR_SUGGESTION_ID,
     SERVICE_PROCESS_IMMACULATERR_SUGGESTION,
+    SERVICE_RESET_IMMACULATERR_REJECTED,
 )
 from .immaculaterr_client import ImmaculaterrClient
 
@@ -30,6 +31,8 @@ PROCESS_SUGGESTION_SCHEMA = vol.Schema(
         vol.Optional(ATTR_APPLY_IMMEDIATELY, default=True): cv.boolean,
     }
 )
+
+RESET_REJECTED_SCHEMA = vol.Schema({})
 
 
 class ImmaculaterrRequestHandler:
@@ -64,6 +67,14 @@ class ImmaculaterrRequestHandler:
             _LOGGER.error("Error processing Immaculaterr suggestion: %s", err)
             return False
 
+    async def async_reset_rejected(self) -> bool:
+        try:
+            await self._client.async_reset_rejected()
+            return True
+        except Exception as err:
+            _LOGGER.error("Error resetting Immaculaterr rejected suggestions: %s", err)
+            return False
+
     async def close(self) -> None:
         await self._client.close()
 
@@ -80,6 +91,13 @@ async def async_setup_immaculaterr_services(
             return
         await handler.async_process_suggestion(call)
 
+    async def handle_reset_rejected(call: ServiceCall) -> None:
+        handler = hass.data.get(domain, {}).get("immaculaterr_request_handler")
+        if not handler:
+            _LOGGER.error("Immaculaterr service called without a request handler")
+            return
+        await handler.async_reset_rejected()
+
     try:
         if not hass.services.has_service(domain, SERVICE_PROCESS_IMMACULATERR_SUGGESTION):
             hass.services.async_register(
@@ -87,6 +105,13 @@ async def async_setup_immaculaterr_services(
                 SERVICE_PROCESS_IMMACULATERR_SUGGESTION,
                 handle_process_suggestion,
                 schema=PROCESS_SUGGESTION_SCHEMA,
+            )
+        if not hass.services.has_service(domain, SERVICE_RESET_IMMACULATERR_REJECTED):
+            hass.services.async_register(
+                domain,
+                SERVICE_RESET_IMMACULATERR_REJECTED,
+                handle_reset_rejected,
+                schema=RESET_REJECTED_SCHEMA,
             )
         return True
     except Exception as err:
@@ -101,7 +126,11 @@ async def async_unload_immaculaterr_services(
     if handler:
         await handler.close()
 
-    if hass.services.has_service(domain, SERVICE_PROCESS_IMMACULATERR_SUGGESTION):
-        hass.services.async_remove(domain, SERVICE_PROCESS_IMMACULATERR_SUGGESTION)
+    for service in (
+        SERVICE_PROCESS_IMMACULATERR_SUGGESTION,
+        SERVICE_RESET_IMMACULATERR_REJECTED,
+    ):
+        if hass.services.has_service(domain, service):
+            hass.services.async_remove(domain, service)
 
     return True

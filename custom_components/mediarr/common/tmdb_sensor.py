@@ -1,6 +1,7 @@
 """TMDB-based media sensor for Mediarr."""
 import logging
 from abc import ABC, abstractmethod
+from collections import OrderedDict
 import async_timeout
 from datetime import datetime
 from ..common.sensor import MediarrSensor
@@ -8,10 +9,12 @@ from ..common.sensor import MediarrSensor
 _LOGGER = logging.getLogger(__name__)
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
+_CACHE_MAX_SIZE = 500
+
 
 class TMDBMediaSensor(MediarrSensor, ABC):
     """Base class for TMDB-based media sensors."""
-   
+
     def __init__(self, session, tmdb_api_key, language='en', filters=None):
         """Initialize the sensor."""
         super().__init__()
@@ -19,8 +22,8 @@ class TMDBMediaSensor(MediarrSensor, ABC):
         self._tmdb_api_key = tmdb_api_key
         self._language = language
         self._available = True
-        self._cache = {}
-       
+        self._cache: OrderedDict = OrderedDict()
+
         # Initialize default filters
         self._filters = {
             'language': language,
@@ -29,10 +32,19 @@ class TMDBMediaSensor(MediarrSensor, ABC):
             'exclude_genres': [10763, 10764, 10767],  # News, Reality, Talk shows
             'exclude_non_english': True
         }
-       
+
         # Update with user-provided filters
         if filters:
             self._filters.update(filters)
+
+    def _cache_set(self, key, value):
+        """Store a value in the bounded LRU cache."""
+        if key in self._cache:
+            self._cache.move_to_end(key)
+        else:
+            if len(self._cache) >= _CACHE_MAX_SIZE:
+                self._cache.popitem(last=False)
+        self._cache[key] = value
    
     
 
@@ -211,7 +223,7 @@ class TMDBMediaSensor(MediarrSensor, ABC):
                             tmdb_id, poster_url is not None, backdrop_url is not None, main_backdrop_url is not None)
 
                 result = (poster_url, backdrop_url, main_backdrop_url)
-                self._cache[cache_key] = result
+                self._cache_set(cache_key, result)
                 return result
             
             return None, None, None
@@ -242,7 +254,7 @@ class TMDBMediaSensor(MediarrSensor, ABC):
             
             if results and results.get("results"):
                 tmdb_id = results["results"][0]["id"]
-                self._cache[cache_key] = tmdb_id
+                self._cache_set(cache_key, tmdb_id)
                 return tmdb_id
             
             return None
@@ -271,7 +283,7 @@ class TMDBMediaSensor(MediarrSensor, ABC):
                     'overview': data.get('overview', 'No description available.'),
                     'year': data.get('release_date' if media_type == 'movie' else 'first_air_date', '')[:4]
                 }
-                self._cache[cache_key] = details
+                self._cache_set(cache_key, details)
                 return details
                 
             return None

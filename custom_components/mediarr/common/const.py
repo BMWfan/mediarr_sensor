@@ -36,6 +36,7 @@ SERVICE_MOVIE_REQUEST = "submit_movie_request"
 SERVICE_TV_REQUEST = "submit_tv_request"
 SERVICE_UPDATE_REQUEST = "update_request"
 SERVICE_PROCESS_IMMACULATERR_SUGGESTION = "process_immaculaterr_suggestion"
+SERVICE_RESET_IMMACULATERR_REJECTED = "reset_immaculaterr_rejected"
 
 ATTR_REQUEST_NAME = "name"
 ATTR_REQUEST_TYPE = "type"

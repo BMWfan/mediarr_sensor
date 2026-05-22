@@ -6,8 +6,10 @@ import re
 import async_timeout
 import voluptuous as vol
 import aiofiles
+from typing import Any
 from pathlib import Path
 from datetime import datetime
+from urllib.parse import urlparse
 from homeassistant.const import CONF_TOKEN, CONF_URL
 import homeassistant.helpers.config_validation as cv
 from ..common.const import CONF_MAX_ITEMS, DEFAULT_MAX_ITEMS
@@ -15,6 +17,117 @@ from ..common.tmdb_sensor import TMDBMediaSensor
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _normalize_base_url(url: str) -> str:
+    """Normalize Plex base URL and add default scheme when omitted."""
+    value = str(url or "").strip()
+    if not value:
+        return value
+    if not value.startswith(("http://", "https://")):
+        value = f"http://{value}"
+    return value.rstrip("/")
+
+
+def _resolve_ha_plex_connection(hass, entry_id: str | None = None) -> dict[str, Any] | None:
+    """Resolve URL/token from an existing Home Assistant Plex config entry."""
+    entries = hass.config_entries.async_entries("plex")
+    if not entries:
+        return None
+
+    selected_entry = None
+    if entry_id:
+        selected_entry = hass.config_entries.async_get_entry(entry_id)
+        if not selected_entry or selected_entry.domain != "plex":
+            return None
+    else:
+        selected_entry = entries[0]
+
+    server_config = selected_entry.data.get("server_config") or {}
+    base_url = _normalize_base_url(server_config.get("url") or selected_entry.data.get("url"))
+    token = str(server_config.get("token") or selected_entry.data.get("token") or "").strip()
+    verify_ssl = bool(
+        server_config.get("verify_ssl", selected_entry.data.get("verify_ssl", True))
+    )
+    if not base_url or not token:
+        return None
+
+    return {
+        "entry_id": selected_entry.entry_id,
+        "url": base_url,
+        "token": token,
+        "verify_ssl": verify_ssl,
+    }
+
+
+def _resolve_connection_config(hass, config: dict[str, Any]) -> dict[str, Any] | None:
+    """Resolve effective Plex connection config (HA Plex auth or manual)."""
+    auth_method = str(config.get("auth_method") or "").strip()
+    use_ha_plex = bool(config.get("use_ha_plex"))
+
+    if auth_method == "home_assistant_plex" or use_ha_plex:
+        resolved = _resolve_ha_plex_connection(
+            hass,
+            str(config.get("plex_entry_id") or "").strip() or None,
+        )
+        if resolved:
+            return resolved
+
+    manual_url = _normalize_base_url(config.get(CONF_URL) or "")
+    manual_token = str(config.get(CONF_TOKEN) or "").strip()
+    verify_ssl = bool(config.get("verify_ssl", True))
+    if not manual_url or not manual_token:
+        return None
+
+    return {
+        "entry_id": None,
+        "url": manual_url,
+        "token": manual_token,
+        "verify_ssl": verify_ssl,
+    }
+
+
+def _extract_ip_candidate_from_host(hostname: str | None) -> str | None:
+    """Extract an IPv4 candidate from dash-encoded Plex hostnames."""
+    host = str(hostname or "").strip().lower()
+    if not host:
+        return None
+    first_label = host.split(".", 1)[0]
+    if not re.fullmatch(r"\d{1,3}(?:-\d{1,3}){3}", first_label):
+        return None
+    octets = first_label.split("-")
+    try:
+        if any(not (0 <= int(octet) <= 255) for octet in octets):
+            return None
+    except ValueError:
+        return None
+    return ".".join(octets)
+
+
+def _build_candidate_urls(base_url: str, verify_ssl: bool) -> list[tuple[str, bool]]:
+    """Build candidate Plex URLs with resilient local-IP fallback."""
+    candidates: list[tuple[str, bool]] = []
+
+    def _add(url: str, ssl_flag: bool) -> None:
+        normalized = _normalize_base_url(url)
+        item = (normalized, bool(ssl_flag))
+        if item not in candidates:
+            candidates.append(item)
+
+    parsed = urlparse(base_url)
+    _add(base_url, verify_ssl)
+
+    if parsed.hostname and not parsed.port:
+        _add(f"{parsed.scheme}://{parsed.hostname}:32400", verify_ssl)
+
+    ip_candidate = _extract_ip_candidate_from_host(parsed.hostname)
+    if ip_candidate:
+        port = parsed.port or 32400
+        # Direct LAN fallback for environments where *.plex.direct DNS is unavailable.
+        _add(f"http://{ip_candidate}:{port}", False)
+        _add(f"https://{ip_candidate}:{port}", False)
+
+    return candidates
 
 PLEX_SCHEMA = {
     vol.Required(CONF_TOKEN): cv.string,
@@ -31,8 +144,9 @@ class PlexMediarrSensor(TMDBMediaSensor):
         """Initialize the sensor."""
         super().__init__(session, config['tmdb_api_key'], config.get('language', 'en'))
         self.hass = hass  # Add hass reference
-        self._base_url = config[CONF_URL].rstrip('/')
+        self._base_url = _normalize_base_url(config[CONF_URL])
         self._token = config[CONF_TOKEN]
+        self._verify_ssl = bool(config.get("verify_ssl", True))
         self._max_items = config[CONF_MAX_ITEMS]
         self._name = "Plex Mediarr"
         self._sections = sections
@@ -116,7 +230,11 @@ class PlexMediarrSensor(TMDBMediaSensor):
         headers = {"X-Plex-Token": self._token}
         try:
             async with async_timeout.timeout(10):
-                async with self._session.get(url, headers=headers) as response:
+                async with self._session.get(
+                    url,
+                    headers=headers,
+                    ssl=self._verify_ssl,
+                ) as response:
                     if response.status == 200:
                         xml_content = await response.text()
                         tree = ET.fromstring(xml_content)
@@ -130,24 +248,32 @@ class PlexMediarrSensor(TMDBMediaSensor):
             return None
     async def _download_and_cache_image(self, url, item_id, image_type):
         """Download and cache an image from Plex."""
+        file_name = f"plex_{item_id}_{image_type}.jpg"
+        cache_dir = Path(self.hass.config.path("www/mediarr/cache"))
+        cached_path = cache_dir / file_name
+
+        if await self.hass.async_add_executor_job(cached_path.exists):
+            return f"/local/mediarr/cache/{file_name}"
+
         try:
             headers = {"X-Plex-Token": self._token}
-            
+
             async with async_timeout.timeout(10):
-                async with self._session.get(url, headers=headers) as response:
+                async with self._session.get(
+                    url,
+                    headers=headers,
+                    ssl=self._verify_ssl,
+                ) as response:
                     if response.status == 200:
-                        cache_dir = Path(self.hass.config.path("www/mediarr/cache"))
-                        cache_dir.mkdir(parents=True, exist_ok=True)
-                        
-                        file_name = f"plex_{item_id}_{image_type}.jpg"
-                        cached_path = cache_dir / file_name
-                        
+                        await self.hass.async_add_executor_job(
+                            lambda: cache_dir.mkdir(parents=True, exist_ok=True)
+                        )
+
                         content = await response.read()
-                        
-                        # Use aiofiles for async file operations
+
                         async with aiofiles.open(cached_path, 'wb') as f:
                             await f.write(content)
-                            
+
                         _LOGGER.debug("Successfully cached image for %s: %s", item_id, image_type)
                         return f"/local/mediarr/cache/{file_name}"
                     else:
@@ -156,22 +282,25 @@ class PlexMediarrSensor(TMDBMediaSensor):
         except Exception as err:
             _LOGGER.error("Error caching image %s for %s: %s", image_type, item_id, err)
             return None
-        
-    def _clean_unused_images(self, current_ids):
+
+    async def _clean_unused_images(self, current_ids):
         """Clean up cached images that aren't in the current item list."""
         try:
             cache_dir = Path(self.hass.config.path("www/mediarr/cache"))
-            if not cache_dir.exists():
+            if not await self.hass.async_add_executor_job(cache_dir.exists):
                 return
 
-            for image_file in cache_dir.glob("plex_*.jpg"):
-                item_id = image_file.stem.split('_')[1]
-                if item_id not in current_ids:
-                    try:
-                        image_file.unlink()
-                        _LOGGER.debug("Removed unused image: %s", image_file.name)
-                    except Exception as err:
-                        _LOGGER.error("Error removing image %s: %s", image_file.name, err)
+            def _do_cleanup():
+                for image_file in cache_dir.glob("plex_*.jpg"):
+                    item_id = image_file.stem.split('_')[1]
+                    if item_id not in current_ids:
+                        try:
+                            image_file.unlink()
+                            _LOGGER.debug("Removed unused image: %s", image_file.name)
+                        except Exception as err:
+                            _LOGGER.error("Error removing image %s: %s", image_file.name, err)
+
+            await self.hass.async_add_executor_job(_do_cleanup)
         except Exception as err:
             _LOGGER.error("Error cleaning cached images: %s", err)
 
@@ -394,7 +523,7 @@ class PlexMediarrSensor(TMDBMediaSensor):
             self._state = len(recently_added)
             self._attributes = {'data': card_json}
             self._available = True
-            self._clean_unused_images(self._current_item_ids)
+            await self._clean_unused_images(self._current_item_ids)
         except Exception as err:
             _LOGGER.error("Error updating Plex sensor: %s", err)
             self._state = 0
@@ -405,27 +534,68 @@ class PlexMediarrSensor(TMDBMediaSensor):
     async def create_sensors(cls, hass, config):
         """Create a single Plex sensor for all sections."""
         try:
-            base_url = config[CONF_URL].rstrip('/')
-            token = config[CONF_TOKEN]
+            resolved_connection = _resolve_connection_config(hass, config)
+            if not resolved_connection:
+                raise Exception("No valid Plex connection found (HA Plex entry or manual URL/token)")
 
-            # Fetch sections
-            url = f"{base_url}/library/sections"
+            raw_base_url = str(resolved_connection["url"]).strip()
+            base_url = _normalize_base_url(raw_base_url)
+            token = resolved_connection["token"]
+            verify_ssl = bool(resolved_connection.get("verify_ssl", True))
+            candidate_urls = _build_candidate_urls(base_url, verify_ssl)
+
+            if raw_base_url and "://" not in raw_base_url:
+                _LOGGER.warning(
+                    "Plex URL missing scheme, assuming http://%s",
+                    raw_base_url,
+                )
+
             headers = {"X-Plex-Token": token, "Accept": "application/xml"}
-            
+            xml_content = None
+            selected_base_url = None
+            selected_verify_ssl = verify_ssl
+            last_error = None
+
             async with aiohttp.ClientSession() as session:
-                async with async_timeout.timeout(10):
-                    async with session.get(url, headers=headers) as response:
-                        if response.status != 200:
-                            raise Exception(f"Error fetching library sections: {response.status}")
-                        xml_content = await response.text()
+                for candidate, candidate_ssl in candidate_urls:
+                    url = f"{candidate}/library/sections"
+                    try:
+                        async with async_timeout.timeout(10):
+                            async with session.get(
+                                url,
+                                headers=headers,
+                                ssl=candidate_ssl,
+                            ) as response:
+                                if response.status != 200:
+                                    last_error = Exception(
+                                        f"Error fetching library sections from {candidate}: {response.status}"
+                                    )
+                                    continue
+                                xml_content = await response.text()
+                                selected_base_url = candidate
+                                selected_verify_ssl = candidate_ssl
+                                break
+                    except Exception as err:
+                        last_error = err
+                        continue
+
+            if not xml_content or not selected_base_url:
+                if last_error:
+                    raise last_error
+                raise Exception("Unable to load Plex sections")
 
             # Parse XML
             root = ET.fromstring(xml_content)
             sections = [directory.get("key") for directory in root.findall(".//Directory") 
                     if directory.get("key")]
 
+            effective_config = dict(config)
+            effective_config[CONF_URL] = selected_base_url
+            effective_config[CONF_TOKEN] = token
+            effective_config["verify_ssl"] = selected_verify_ssl
+
             # Pass hass as the first argument
-            return [cls(hass, async_get_clientsession(hass), config, sections)]
+            return [cls(hass, async_get_clientsession(hass), effective_config, sections)]
 
         except Exception as error:
             _LOGGER.error("Error initializing Plex sensors: %s", error)
