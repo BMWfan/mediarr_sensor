@@ -23,7 +23,7 @@ sensor:
       api_key: your_api_key
 ```      
 
-To use the Immaculaterr approve/reject/apply service, add this to your `configuration.yaml`:
+To use the Immaculaterr services, add this to your `configuration.yaml`:
 
 ```yaml
 mediarr:
@@ -32,6 +32,24 @@ mediarr:
     username: your_username
     password: !secret immaculaterr_password
 ```
+
+**Available Immaculaterr services:**
+
+- `mediarr.process_immaculaterr_suggestion` — Approve, reject, or remove a suggestion:
+  ```yaml
+  service: mediarr.process_immaculaterr_suggestion
+  data:
+    library_section_key: "1"
+    media_type: movie        # movie or tv
+    suggestion_id: 12345
+    action: approve          # approve, reject, remove, undo, keep
+    apply: true              # Optional: apply immediately (default: true)
+  ```
+
+- `mediarr.reset_immaculaterr_rejected` — Reset all previously rejected suggestions so they appear again:
+  ```yaml
+  service: mediarr.reset_immaculaterr_rejected
+  ```
 
 ## Installation
 
@@ -152,16 +170,21 @@ sensor:
       username: your_username
       password: !secret immaculaterr_password
       max_items: 45
-      mode: review  # Optional: review or pendingApproval
+      mode: review                    # Optional: review or pendingApproval
       tmdb_api_key: "your_tmdb_api_key"  # Optional, used for overview/backdrop enrichment
       movie_library_section_key: "1"  # Optional
       tv_library_section_key: "2"     # Optional
+      # Watched collections (requires Immaculaterr v1.7.6+):
+      enable_watched_collection: false         # Optional: creates additional sensors based on watch history
+      watched_collection_kind: recentlyWatched # Optional: recentlyWatched or changeOfTaste
 ```
 # Sensor Configuration
 - **max_items**: Number of items to display (default: 45)
 - **days_to_check**: Days to look ahead for upcoming content (Sonarr only, default: 90)
 - **trending_type**: Content type to display for Trakt and TMDB
 - **mode**: For Immaculaterr Observatory sensors, use `review` for the suggestion feed or `pendingApproval` for approval queues
+- **enable_watched_collection**: Creates additional sensors based on Plex watch history (requires Immaculaterr v1.7.6+)
+- **watched_collection_kind**: `recentlyWatched` recommends based on recently watched titles; `changeOfTaste` recommends from different genres than usual
 - Available Filters
 
 - hide_existing: Toggle library content filtering (default: true)
