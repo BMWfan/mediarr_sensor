@@ -1,50 +1,45 @@
 """Radarr integration for Mediarr."""
-from ..common.sensor import MediarrSensor 
-from datetime import datetime, timedelta 
-import async_timeout 
+from ..common.sensor import MediarrSensor
+from datetime import datetime, timedelta
+import async_timeout
 import logging
-
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class RadarrMediarrSensor(MediarrSensor):
-    def __init__(self, session, api_key, url, max_items, days_to_check):
-        """Initialize the sensor."""
+    def __init__(self, session, api_key, url, max_items, days_to_check, *, instance_name="Radarr"):
         self._session = session
-        self._radarr_api_key = api_key
+        self._api_key = api_key
         self._url = url.rstrip('/')
         self._max_items = max_items
         self._days_to_check = days_to_check
-        self._name = "Radarr Mediarr"
+        self._name = f"{instance_name} Mediarr"
+        self._uid_prefix = instance_name.lower().replace(" ", "_")
         self._state = 0
-        
-        
 
     @property
     def name(self):
-        """Return the name of the sensor."""
         return self._name
 
     @property
     def unique_id(self):
-        """Return a unique ID."""
-        return f"radarr_mediarr_{self._url}"
+        return f"{self._uid_prefix}_mediarr_{self._url}"
 
     async def async_update(self):
-        """Update the sensor."""
         try:
-            headers = {'X-Api-Key': self._radarr_api_key}
+            headers = {'X-Api-Key': self._api_key}
             now = datetime.now().astimezone()
             max_date = now + timedelta(days=self._days_to_check)
-            
+
             async with async_timeout.timeout(10):
                 async with self._session.get(
                     f"{self._url}/api/v3/movie",
                     headers=headers
                 ) as response:
                     if response.status != 200:
-                        raise Exception(f"Failed to connect to Radarr. Status: {response.status}")
-                    
+                        raise Exception(f"Failed to connect to {self._name}. Status: {response.status}")
+
                     movies = await response.json()
                     card_json = []
                     upcoming_movies = []
@@ -73,7 +68,7 @@ class RadarrMediarrSensor(MediarrSensor):
                             release_type, release_date = release_dates[0]
 
                             images = {img['coverType']: img['remoteUrl'] for img in movie.get('images', [])}
-                            
+
                             movie_data = {
                                 "title": str(movie["title"]),
                                 "release": f"{release_type} - {release_date.strftime('%Y-%m-%d')}",
@@ -108,7 +103,7 @@ class RadarrMediarrSensor(MediarrSensor):
                     self._available = True
 
         except Exception as err:
-            _LOGGER.error("Error updating Radarr sensor: %s", err)
+            _LOGGER.error("Error updating %s sensor: %s", self._name, err)
             self._state = 0
             self._attributes = {'data': []}
             self._available = False

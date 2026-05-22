@@ -283,6 +283,8 @@ async def _async_build_sensors(
             else None
         )
         max_items = immaculaterr_config.get("max_items", DEFAULT_MAX_ITEMS)
+        enable_watched = bool(immaculaterr_config.get("enable_watched_collection", False))
+        watched_kind = immaculaterr_config.get("watched_collection_kind", "recentlyWatched")
         if not movie_library_section_keys and not tv_library_section_keys:
             _LOGGER.warning(
                 "Immaculaterr configured but no library section key set. "
@@ -300,6 +302,19 @@ async def _async_build_sensors(
                 mode,
                 tmdb_api_key,
             ))
+            if enable_watched:
+                sensors.append(ImmaculaterrMediarrSensor(
+                    immaculaterr_config["url"],
+                    immaculaterr_config["username"],
+                    immaculaterr_config["password"],
+                    "movie",
+                    movie_library_section_key,
+                    max_items,
+                    mode,
+                    tmdb_api_key,
+                    collection_type="watched",
+                    collection_kind=watched_kind,
+                ))
 
         for tv_library_section_key in tv_library_section_keys:
             sensors.append(ImmaculaterrMediarrSensor(
@@ -312,6 +327,19 @@ async def _async_build_sensors(
                 mode,
                 tmdb_api_key,
             ))
+            if enable_watched:
+                sensors.append(ImmaculaterrMediarrSensor(
+                    immaculaterr_config["url"],
+                    immaculaterr_config["username"],
+                    immaculaterr_config["password"],
+                    "tv",
+                    tv_library_section_key,
+                    max_items,
+                    mode,
+                    tmdb_api_key,
+                    collection_type="watched",
+                    collection_kind=watched_kind,
+                ))
 
         if setup_yaml_immaculaterr_services:
             from .services.immaculaterr_requests import (

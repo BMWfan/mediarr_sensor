@@ -40,44 +40,82 @@ class SeerDiscoveryMediarrSensor(TMDBMediaSensor):
             self._name = f"Seer Mediarr Popular {'Movies' if media_type == 'movies' else 'TV'}"
         else:
             self._name = f"Seer Mediarr {content_type.title()}"
+        self._empty_warning_emitted = False
+
+    @staticmethod
+    def _normalize_media_type(value, default="movie"):
+        """Normalize seer media type values to movie/tv."""
+        if not value:
+            return default
+
+        text = str(value).strip().lower()
+        if text in {"movie", "movies", "film"}:
+            return "movie"
+        if text in {"tv", "show", "shows", "series"}:
+            return "tv"
+        return default
+
+    @staticmethod
+    def _extract_year_from_item(item, media_type):
+        """Extract a 4-digit year string from Seer payload."""
+        if media_type == "movie":
+            date_value = item.get("release_date") or item.get("releaseDate")
+        else:
+            date_value = item.get("first_air_date") or item.get("firstAirDate")
+        if not date_value:
+            return ""
+        try:
+            return str(date_value).split("-")[0]
+        except Exception:
+            return ""
+
+    @staticmethod
+    def _seer_image_url(path, size):
+        """Build image URL from Seer/TMDB path format."""
+        if not path:
+            return ""
+        value = str(path).strip()
+        if not value:
+            return ""
+        if value.startswith("http://") or value.startswith("https://"):
+            return value
+        return f"https://image.tmdb.org/t/p/{size}{value}"
             
     def should_include_item(self, item, media_type):
         """Apply filters to determine if an item should be included."""
-        # Skip if no item
         if not item:
             return False
-           
-        # Filter by year
-        year = None
-        if media_type == 'tv' and item.get('first_air_date'):
+
+        # Support both snake_case (TMDB direct) and camelCase (Overseerr proxy)
+        if media_type == 'tv':
+            date_str = item.get('first_air_date') or item.get('firstAirDate') or ''
+        else:
+            date_str = item.get('release_date') or item.get('releaseDate') or ''
+
+        if date_str:
             try:
-                year = int(item['first_air_date'].split('-')[0])
+                year = int(str(date_str).split('-')[0])
+                if year < self._filters.get('min_year', 0):
+                    return False
             except (ValueError, IndexError, TypeError):
                 pass
-        elif media_type == 'movie' and item.get('release_date'):
-            try:
-                year = int(item['release_date'].split('-')[0])
-            except (ValueError, IndexError, TypeError):
-                pass
-               
-        if year and year < self._filters.get('min_year', 0):
+
+        # Overseerr returns 'originalLanguage'; TMDB direct returns 'original_language'
+        lang = item.get('original_language') or item.get('originalLanguage') or ''
+        if self._filters.get('exclude_non_english', True) and lang != 'en':
             return False
-            
-        # Filter by language
-        if self._filters.get('exclude_non_english', True) and item.get('original_language') != 'en':
-            return False
-            
-        # Filter by genre
+
+        # Overseerr returns 'genreIds'; TMDB direct returns 'genre_ids'
+        genre_ids = item.get('genre_ids') or item.get('genreIds') or []
         excluded_genres = self._filters.get('exclude_genres', [])
-        if excluded_genres and any(genre_id in excluded_genres for genre_id in item.get('genre_ids', [])):
+        if excluded_genres and any(gid in excluded_genres for gid in genre_ids):
             return False
-            
-        # Filter for TV talk shows
+
         if media_type == 'tv' and self._filters.get('exclude_talk_shows', True):
             title = item.get('name', '') or item.get('title', '')
             if self.is_talk_show(title):
                 return False
-                
+
         return True
        
     def is_talk_show(self, title):
@@ -174,8 +212,11 @@ class SeerDiscoveryMediarrSensor(TMDBMediaSensor):
     async def _process_media_items(self, data, media_type, requested_ids):
         """Process media items in parallel with filtering."""
         if not data or not data.get('results'):
-            _LOGGER.debug("No data or results to process for %s", media_type)
+            _LOGGER.debug("[mediarr-diag] No data or results for %s (data=%s)", media_type, type(data).__name__)
             return []
+        _LOGGER.debug("[mediarr-diag] Processing %d items for %s, first item keys: %s",
+                      len(data['results']), media_type,
+                      list(data['results'][0].keys()) if data['results'] else [])
 
         filtered_count = 0
         requested_count = 0
@@ -196,30 +237,65 @@ class SeerDiscoveryMediarrSensor(TMDBMediaSensor):
                     _LOGGER.debug("Item %s already requested, skipping", tmdb_id)
                     return None
                 
+                item_media_type = media_type
+                if self._content_type == "trending":
+                    item_media_type = self._normalize_media_type(
+                        item.get("mediaType") or item.get("media_type") or item.get("type"),
+                        default=media_type,
+                    )
+
                 # Apply filters
-                if not self.should_include_item(item, media_type):
+                if not self.should_include_item(item, item_media_type):
                     filtered_count += 1
-                    _LOGGER.debug("Item %s filtered out by criteria", tmdb_id)
+                    lang = item.get('original_language') or item.get('originalLanguage') or 'MISSING'
+                    genre_ids = item.get('genre_ids') or item.get('genreIds') or []
+                    _LOGGER.debug("[mediarr-diag] Item %s filtered: lang=%s genres=%s", tmdb_id, lang, genre_ids)
                     return None
 
-                details = await self._get_tmdb_details(tmdb_id, media_type)
+                details = None
+                if self._tmdb_api_key:
+                    details = await self._get_tmdb_details(tmdb_id, item_media_type)
+                    if not details:
+                        detail_failure_count += 1
+                        _LOGGER.debug("Failed to get TMDB details for %s", tmdb_id)
+
                 if not details:
-                    detail_failure_count += 1
-                    _LOGGER.debug("Failed to get TMDB details for %s", tmdb_id)
-                    return None
+                    details = {
+                        "title": item.get("title") if item_media_type == "movie" else item.get("name"),
+                        "overview": item.get("overview") or "No overview available",
+                        "year": self._extract_year_from_item(item, item_media_type),
+                    }
 
-                poster_url, backdrop_url, main_backdrop_url = await self._get_tmdb_images(tmdb_id, media_type)
-                
+                poster_url = backdrop_url = main_backdrop_url = ""
+                if self._tmdb_api_key:
+                    tmdb_poster, tmdb_backdrop, tmdb_main_backdrop = await self._get_tmdb_images(
+                        tmdb_id, item_media_type
+                    )
+                    poster_url = str(tmdb_poster or "")
+                    backdrop_url = str(tmdb_backdrop or "")
+                    main_backdrop_url = str(tmdb_main_backdrop or "")
+
+                if not poster_url:
+                    poster_url = self._seer_image_url(item.get("posterPath"), "w500")
+                if not backdrop_url:
+                    backdrop_url = self._seer_image_url(item.get("backdropPath"), "w780")
+                if not main_backdrop_url:
+                    main_backdrop_url = self._seer_image_url(item.get("backdropPath"), "original") or backdrop_url
+
                 success_count += 1
                 return {
-                    'title': details['title'],
-                    'overview': details['overview'][:100] + '...' if details.get('overview') else 'No overview available',
-                    'year': details['year'],
+                    'title': details.get('title') or item.get('title') or item.get('name') or 'Unknown',
+                    'overview': (
+                        details['overview'][:100] + '...'
+                        if details.get('overview')
+                        else 'No overview available'
+                    ),
+                    'year': details.get('year') or '',
                     'poster': str(poster_url or ""),
                     'fanart': str(main_backdrop_url or backdrop_url or ""),
                     'banner': str(backdrop_url or ""),
-                    'release': details['year'],
-                    'type': 'Movie' if media_type == 'movie' else 'TV Show',
+                    'release': details.get('year') or '',
+                    'type': item_media_type,
                     'flag': 1,
                     'id': tmdb_id
                 }
@@ -304,7 +380,14 @@ class SeerDiscoveryMediarrSensor(TMDBMediaSensor):
             _LOGGER.debug("Final number of items after max_items limit: %d", len(all_items))
 
             if not all_items:
-                _LOGGER.warning("No items passed filters for %s, using fallback", self._content_type)
+                if not self._empty_warning_emitted:
+                    _LOGGER.warning(
+                        "No items passed filters for %s, using fallback (repeated empties now logged as debug)",
+                        self._content_type,
+                    )
+                    self._empty_warning_emitted = True
+                else:
+                    _LOGGER.debug("No items passed filters for %s, using fallback", self._content_type)
                 all_items.append({
                     'title_default': '$title',
                     'line1_default': '$type',
@@ -312,6 +395,8 @@ class SeerDiscoveryMediarrSensor(TMDBMediaSensor):
                     'line3_default': '$year',
                     'icon': 'mdi:movie-search'
                 })
+            else:
+                self._empty_warning_emitted = False
 
             self._state = len(all_items)
             self._attributes = {'data': all_items}

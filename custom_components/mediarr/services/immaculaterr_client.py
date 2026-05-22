@@ -133,6 +133,31 @@ class ImmaculaterrClient:
             },
         )
 
+    async def async_fetch_watched_suggestions(
+        self,
+        media_type: str,
+        library_section_key: str,
+        mode: str = "review",
+        collection_kind: str = "recentlyWatched",
+    ) -> dict[str, Any]:
+        """Fetch watched-based suggestions (recentlyWatched or changeOfTaste).
+
+        Added in Immaculaterr v1.7.6.
+        """
+        endpoint = "/api/observatory/watched/movies"
+        if media_type == "tv":
+            endpoint = "/api/observatory/watched/tv"
+
+        return await self._request_json(
+            "GET",
+            endpoint,
+            params={
+                "librarySectionKey": library_section_key,
+                "mode": mode,
+                "collectionKind": collection_kind,
+            },
+        )
+
     async def async_record_decision(
         self,
         *,
@@ -151,6 +176,27 @@ class ImmaculaterrClient:
             },
         )
 
+    async def async_record_watched_decision(
+        self,
+        *,
+        library_section_key: str,
+        media_type: str,
+        collection_kind: str,
+        suggestion_id: int,
+        action: str,
+    ) -> dict[str, Any]:
+        """Record a decision for a watched-collection suggestion."""
+        return await self._request_json(
+            "POST",
+            "/api/observatory/watched/decisions",
+            json_data={
+                "librarySectionKey": library_section_key,
+                "mediaType": media_type,
+                "collectionKind": collection_kind,
+                "decisions": [{"id": suggestion_id, "action": action}],
+            },
+        )
+
     async def async_apply(
         self, *, library_section_key: str, media_type: str
     ) -> dict[str, Any]:
@@ -161,6 +207,33 @@ class ImmaculaterrClient:
                 "librarySectionKey": library_section_key,
                 "mediaType": media_type,
             },
+        )
+
+    async def async_apply_watched(
+        self, *, library_section_key: str, media_type: str
+    ) -> dict[str, Any]:
+        """Apply pending watched-collection decisions."""
+        return await self._request_json(
+            "POST",
+            "/api/observatory/watched/apply",
+            json_data={
+                "librarySectionKey": library_section_key,
+                "mediaType": media_type,
+            },
+        )
+
+    async def async_reset_rejected(self) -> dict[str, Any]:
+        """Reset all rejected Immaculate Taste suggestions."""
+        return await self._request_json(
+            "DELETE",
+            "/api/observatory/immaculate-taste/rejected/reset",
+        )
+
+    async def async_list_rejected(self) -> dict[str, Any]:
+        """Return the list of rejected Immaculate Taste suggestions."""
+        return await self._request_json(
+            "GET",
+            "/api/observatory/immaculate-taste/rejected",
         )
 
     async def close(self) -> None:

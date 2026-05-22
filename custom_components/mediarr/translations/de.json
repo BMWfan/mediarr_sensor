@@ -4,7 +4,14 @@
       "missing_library_section_key": "Bitte mindestens einen Library-Section-Key setzen (Film oder TV).",
       "missing_tmdb_api_key": "Bitte einen TMDB-API-Key für TMDB-Sensoren setzen.",
       "missing_tmdb_api_key_for_module": "Aktiviere zuerst den gemeinsamen TMDB-API-Key und danach die TMDB-Anreicherung für dieses Modul.",
-      "missing_tmdb_api_key_for_dependency": "Bitte zuerst im TMDB-Modul einen TMDB-API-Key setzen."
+      "missing_tmdb_api_key_for_dependency": "Bitte zuerst im TMDB-Modul einen TMDB-API-Key setzen.",
+      "missing_ha_plex_entry": "Keine Home-Assistant-Plex-Verbindung gefunden. Richte zuerst die offizielle Plex-Integration ein oder wähle Plex-Konto-Login.",
+      "plex_pin_init_failed": "Plex-Login konnte nicht gestartet werden. Bitte erneut versuchen.",
+      "plex_pin_poll_failed": "Plex-Login konnte nicht geprüft werden. Bitte erneut versuchen.",
+      "plex_auth_pending": "Plex-Login ist noch nicht abgeschlossen. Schließe den Login im Browser ab und bestätige dann erneut.",
+      "plex_server_fetch_failed": "Plex-Server für dieses Konto konnten nicht geladen werden.",
+      "plex_no_servers_found": "Für dieses Konto wurde kein Plex-Server gefunden.",
+      "plex_invalid_server_selection": "Bitte einen gültigen Plex-Server auswählen."
     },
     "step": {
       "user": {
@@ -67,7 +74,9 @@
           "movie_library_section_keys": "Film-Bibliotheken (automatisch erkannt)",
           "tv_library_section_keys": "TV-Bibliotheken (automatisch erkannt)",
           "movie_library_section_key": "Film-Bibliotheksschlüssel (manuell)",
-          "tv_library_section_key": "TV-Bibliotheksschlüssel (manuell)"
+          "tv_library_section_key": "TV-Bibliotheksschlüssel (manuell)",
+          "enable_watched_collection": "Verlaufsbasierte Empfehlungen aktivieren",
+          "watched_collection_kind": "Art der Verlaufsempfehlung"
         },
         "data_description": {
           "mode": "Review zeigt Vorschläge zur manuellen Entscheidung. Pending Approval fokussiert ausstehende Freigaben.",
@@ -76,7 +85,9 @@
           "movie_library_section_keys": "Erkannte Plex-Film-Bibliotheken. Wähle eine oder mehrere aus.",
           "tv_library_section_keys": "Erkannte Plex-TV-Bibliotheken. Wähle eine oder mehrere aus.",
           "movie_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist.",
-          "tv_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist."
+          "tv_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist.",
+          "enable_watched_collection": "Erstellt zusätzliche Sensoren basierend auf deinem Plex-Schau-Verlauf.",
+          "watched_collection_kind": "Zuletzt Gesehen basiert auf den letzten Titeln. Geändertes Genre empfiehlt Inhalte aus anderen Genres als üblich."
         }
       },
       "tmdb": {
@@ -100,15 +111,41 @@
       },
       "plex": {
         "title": "Plex",
-        "description": "Verbinde Plex für den \"Kürzlich hinzugefügt\"-Sensor.",
+        "description": "Verbinde Plex für den \"Kürzlich hinzugefügt\"-Sensor. Wähle Home-Assistant-Plex-Integration oder Plex-Konto-Login.\nToken-Status: {token_status}",
         "data": {
-          "url": "Plex-URL",
-          "token": "Plex-Token",
+          "auth_method": "Verbindungsmethode",
+          "plex_entry_id": "Plex-Server",
           "max_items": "Maximale Einträge",
           "language": "TMDB-Sprache"
         },
         "data_description": {
+          "auth_method": "Home-Assistant-Plex-Integration wird empfohlen. Plex-Konto-Login nutzt den offiziellen Plex-PIN-Flow.",
+          "plex_entry_id": "Wähle, welcher konfigurierte Plex-Server verwendet werden soll.",
           "language": "Sprachcode für TMDB-Metadaten, z. B. en oder de."
+        }
+      },
+      "plex_login": {
+        "title": "Plex-Authentifizierung",
+        "description": "Wähle OAuth, um einen Plex-Token zu erzeugen oder zu erneuern.\nWähle Skip nur, wenn bereits ein gültiger Token aus einem früheren Setup vorhanden ist.",
+        "data": {
+          "token_display": "Aktueller Token (schreibgeschützt)",
+          "auth_action": "Aktion"
+        },
+        "data_description": {
+          "token_display": "Nur Anzeige. Manuelle Änderungen werden ignoriert.",
+          "auth_action": "OAuth startet den Plex-Login. Skip nutzt den vorhandenen Token."
+        }
+      },
+      "plex_login_wait": {
+        "title": "Plex-Authentifizierung",
+        "description": "Öffne diese URL im Browser und melde dich an:\n{auth_url}\nCode: {pin_code}\nNach der Freigabe hierher zurückkehren und auf OK klicken.",
+        "data": {}
+      },
+      "plex_server": {
+        "title": "Plex-Server auswählen",
+        "description": "Wähle, welcher Plex-Server von Mediarr verwendet werden soll.",
+        "data": {
+          "server_index": "Plex-Server"
         }
       },
       "jellyfin": {
@@ -184,7 +221,14 @@
       "missing_library_section_key": "Bitte mindestens einen Library-Section-Key setzen (Film oder TV).",
       "missing_tmdb_api_key": "Bitte einen TMDB-API-Key für TMDB-Sensoren setzen.",
       "missing_tmdb_api_key_for_module": "Aktiviere zuerst den gemeinsamen TMDB-API-Key und danach die TMDB-Anreicherung für dieses Modul.",
-      "missing_tmdb_api_key_for_dependency": "Bitte zuerst im TMDB-Modul einen TMDB-API-Key setzen."
+      "missing_tmdb_api_key_for_dependency": "Bitte zuerst im TMDB-Modul einen TMDB-API-Key setzen.",
+      "missing_ha_plex_entry": "Keine Home-Assistant-Plex-Verbindung gefunden. Richte zuerst die offizielle Plex-Integration ein oder wähle Plex-Konto-Login.",
+      "plex_pin_init_failed": "Plex-Login konnte nicht gestartet werden. Bitte erneut versuchen.",
+      "plex_pin_poll_failed": "Plex-Login konnte nicht geprüft werden. Bitte erneut versuchen.",
+      "plex_auth_pending": "Plex-Login ist noch nicht abgeschlossen. Schließe den Login im Browser ab und bestätige dann erneut.",
+      "plex_server_fetch_failed": "Plex-Server für dieses Konto konnten nicht geladen werden.",
+      "plex_no_servers_found": "Für dieses Konto wurde kein Plex-Server gefunden.",
+      "plex_invalid_server_selection": "Bitte einen gültigen Plex-Server auswählen."
     },
     "step": {
       "init": {
@@ -246,7 +290,9 @@
           "movie_library_section_keys": "Film-Bibliotheken (automatisch erkannt)",
           "tv_library_section_keys": "TV-Bibliotheken (automatisch erkannt)",
           "movie_library_section_key": "Film-Bibliotheksschlüssel (manuell)",
-          "tv_library_section_key": "TV-Bibliotheksschlüssel (manuell)"
+          "tv_library_section_key": "TV-Bibliotheksschlüssel (manuell)",
+          "enable_watched_collection": "Verlaufsbasierte Empfehlungen aktivieren",
+          "watched_collection_kind": "Art der Verlaufsempfehlung"
         },
         "data_description": {
           "mode": "Review zeigt Vorschläge zur manuellen Entscheidung. Pending Approval fokussiert ausstehende Freigaben.",
@@ -255,7 +301,9 @@
           "movie_library_section_keys": "Erkannte Plex-Film-Bibliotheken. Wähle eine oder mehrere aus.",
           "tv_library_section_keys": "Erkannte Plex-TV-Bibliotheken. Wähle eine oder mehrere aus.",
           "movie_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist.",
-          "tv_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist."
+          "tv_library_section_key": "Nur verwenden, wenn die automatische Erkennung nicht verfügbar ist.",
+          "enable_watched_collection": "Erstellt zusätzliche Sensoren basierend auf deinem Plex-Schau-Verlauf.",
+          "watched_collection_kind": "Zuletzt Gesehen basiert auf den letzten Titeln. Geändertes Genre empfiehlt Inhalte aus anderen Genres als üblich."
         }
       },
       "tmdb": {
@@ -279,15 +327,41 @@
       },
       "plex": {
         "title": "Plex",
-        "description": "Verbinde Plex für den \"Kürzlich hinzugefügt\"-Sensor.",
+        "description": "Verbinde Plex für den \"Kürzlich hinzugefügt\"-Sensor. Wähle Home-Assistant-Plex-Integration oder Plex-Konto-Login.\nToken-Status: {token_status}",
         "data": {
-          "url": "Plex-URL",
-          "token": "Plex-Token",
+          "auth_method": "Verbindungsmethode",
+          "plex_entry_id": "Plex-Server",
           "max_items": "Maximale Einträge",
           "language": "TMDB-Sprache"
         },
         "data_description": {
+          "auth_method": "Home-Assistant-Plex-Integration wird empfohlen. Plex-Konto-Login nutzt den offiziellen Plex-PIN-Flow.",
+          "plex_entry_id": "Wähle, welcher konfigurierte Plex-Server verwendet werden soll.",
           "language": "Sprachcode für TMDB-Metadaten, z. B. en oder de."
+        }
+      },
+      "plex_login": {
+        "title": "Plex-Authentifizierung",
+        "description": "Wähle OAuth, um einen Plex-Token zu erzeugen oder zu erneuern.\nWähle Skip nur, wenn bereits ein gültiger Token aus einem früheren Setup vorhanden ist.",
+        "data": {
+          "token_display": "Aktueller Token (schreibgeschützt)",
+          "auth_action": "Aktion"
+        },
+        "data_description": {
+          "token_display": "Nur Anzeige. Manuelle Änderungen werden ignoriert.",
+          "auth_action": "OAuth startet den Plex-Login. Skip nutzt den vorhandenen Token."
+        }
+      },
+      "plex_login_wait": {
+        "title": "Plex-Authentifizierung",
+        "description": "Öffne diese URL im Browser und melde dich an:\n{auth_url}\nCode: {pin_code}\nNach der Freigabe hierher zurückkehren und auf OK klicken.",
+        "data": {}
+      },
+      "plex_server": {
+        "title": "Plex-Server auswählen",
+        "description": "Wähle, welcher Plex-Server von Mediarr verwendet werden soll.",
+        "data": {
+          "server_index": "Plex-Server"
         }
       },
       "jellyfin": {

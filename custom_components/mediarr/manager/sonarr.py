@@ -1,47 +1,41 @@
 """Sonarr integration for Mediarr."""
-from ..common.sensor import MediarrSensor 
-from datetime import datetime, timedelta 
-import async_timeout 
-from zoneinfo import ZoneInfo 
+from ..common.sensor import MediarrSensor
+from datetime import datetime, timedelta
+import async_timeout
+from zoneinfo import ZoneInfo
 import logging
-
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class SonarrMediarrSensor(MediarrSensor):
-    def __init__(self, session, api_key, url, max_items, days_to_check):
-        """Initialize the sensor."""
+    def __init__(self, session, api_key, url, max_items, days_to_check, *, instance_name="Sonarr"):
         self._session = session
-        self._sonarr_api_key = api_key
+        self._api_key = api_key
         self._url = url.rstrip('/')
         self._max_items = max_items
         self._days_to_check = days_to_check
-        self._name = "Sonarr Mediarr"
+        self._name = f"{instance_name} Mediarr"
+        self._uid_prefix = instance_name.lower().replace(" ", "_")
         self._state = 0
-        
-        
 
     @property
     def name(self):
-        """Return the name of the sensor."""
         return self._name
 
     @property
     def unique_id(self):
-        """Return a unique ID."""
-        return f"sonarr_mediarr_{self._url}"
+        return f"{self._uid_prefix}_mediarr_{self._url}"
 
     def _format_date(self, date_str: str) -> str:
-        """Format date string."""
         try:
             return datetime.strptime(date_str, '%Y-%m-%d').strftime('%Y-%m-%d')
         except ValueError:
             return 'Unknown'
 
     async def async_update(self):
-        """Update the sensor."""
         try:
-            headers = {'X-Api-Key': self._sonarr_api_key}
+            headers = {'X-Api-Key': self._api_key}
             now = datetime.now(ZoneInfo('UTC'))
             params = {
                 'start': now.strftime('%Y-%m-%d'),
@@ -63,13 +57,13 @@ class SonarrMediarrSensor(MediarrSensor):
                         for episode in upcoming_episodes:
                             series = episode.get('series', {})
                             air_date = self._format_date(episode['airDate'])
-                            
+
                             if air_date == 'Unknown':
                                 continue
 
                             series_id = series['id']
                             images = {img['coverType']: img['remoteUrl'] for img in series.get('images', [])}
-                            
+
                             show_data = {
                                 'title': f"{series['title']} - {episode.get('seasonNumber', 0):02d}x{episode.get('episodeNumber', 0):02d}",
                                 'episode': str(episode.get('title', 'Unknown')),
@@ -85,7 +79,7 @@ class SonarrMediarrSensor(MediarrSensor):
                                 'flag': 1
                             }
 
-                            # Take earliest episode air date for each series
+                            # Keep earliest episode air date per series
                             if series_id not in shows_dict or air_date < shows_dict[series_id]['release']:
                                 shows_dict[series_id] = show_data
 
@@ -107,10 +101,10 @@ class SonarrMediarrSensor(MediarrSensor):
                         self._attributes = {'data': card_json}
                         self._available = True
                     else:
-                        raise Exception(f"Failed to connect to Sonarr. Status: {response.status}")
+                        raise Exception(f"Failed to connect to {self._name}. Status: {response.status}")
 
         except Exception as err:
-            _LOGGER.error("Error updating Sonarr sensor: %s", err)
+            _LOGGER.error("Error updating %s sensor: %s", self._name, err)
             self._state = 0
             self._attributes = {'data': []}
             self._available = False

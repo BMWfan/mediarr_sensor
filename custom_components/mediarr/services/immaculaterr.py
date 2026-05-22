@@ -24,6 +24,8 @@ class ImmaculaterrMediarrSensor(TMDBMediaSensor):
         max_items: int,
         mode: str = "review",
         tmdb_api_key: str | None = None,
+        collection_type: str = "immaculate-taste",
+        collection_kind: str = "recentlyWatched",
     ) -> None:
         super().__init__(None, tmdb_api_key)
         self._url = url.rstrip("/")
@@ -33,11 +35,30 @@ class ImmaculaterrMediarrSensor(TMDBMediaSensor):
         self._library_section_key = str(library_section_key).strip()
         self._max_items = max_items
         self._mode = mode if mode in ("review", "pendingApproval") else "review"
-        self._name = (
-            "Immaculaterr Mediarr Movies"
-            if media_type == "movie"
-            else "Immaculaterr Mediarr TV"
+        self._collection_type = (
+            collection_type
+            if collection_type in ("immaculate-taste", "watched")
+            else "immaculate-taste"
         )
+        self._collection_kind = (
+            collection_kind
+            if collection_kind in ("recentlyWatched", "changeOfTaste")
+            else "recentlyWatched"
+        )
+
+        if self._collection_type == "watched":
+            kind_label = (
+                "Zuletzt Gesehen" if self._collection_kind == "recentlyWatched"
+                else "Geändertes Genre"
+            )
+            media_label = "Filme" if media_type == "movie" else "Serien"
+            self._name = f"Immaculaterr Mediarr {kind_label} {media_label}"
+        else:
+            self._name = (
+                "Immaculaterr Mediarr Movies"
+                if media_type == "movie"
+                else "Immaculaterr Mediarr TV"
+            )
 
     @property
     def name(self) -> str:
@@ -45,6 +66,11 @@ class ImmaculaterrMediarrSensor(TMDBMediaSensor):
 
     @property
     def unique_id(self) -> str:
+        if self._collection_type == "watched":
+            return (
+                f"immaculaterr_mediarr_watched_{self._collection_kind}_"
+                f"{self._media_type}_{self._library_section_key}_{self._url}"
+            )
         return (
             f"immaculaterr_mediarr_"
             f"{self._media_type}_{self._library_section_key}_{self._url}"
@@ -120,11 +146,20 @@ class ImmaculaterrMediarrSensor(TMDBMediaSensor):
 
     async def async_update(self) -> None:
         try:
-            payload = await self._client.async_fetch_suggestions(
-                self._media_type,
-                self._library_section_key,
-                self._mode,
-            )
+            if self._collection_type == "watched":
+                payload = await self._client.async_fetch_watched_suggestions(
+                    self._media_type,
+                    self._library_section_key,
+                    self._mode,
+                    self._collection_kind,
+                )
+            else:
+                payload = await self._client.async_fetch_suggestions(
+                    self._media_type,
+                    self._library_section_key,
+                    self._mode,
+                )
+
             raw_items = payload.get("items", [])
             approval_required = bool(
                 payload.get("approvalRequiredFromObservatory", False)
@@ -151,6 +186,8 @@ class ImmaculaterrMediarrSensor(TMDBMediaSensor):
                 "media_type": self._media_type,
                 "library_section_key": self._library_section_key,
                 "mode": self._mode,
+                "collection_type": self._collection_type,
+                "collection_kind": self._collection_kind if self._collection_type == "watched" else None,
                 "approval_required_from_observatory": approval_required,
             }
             self._available = True
@@ -162,6 +199,7 @@ class ImmaculaterrMediarrSensor(TMDBMediaSensor):
                 "media_type": self._media_type,
                 "library_section_key": self._library_section_key,
                 "mode": self._mode,
+                "collection_type": self._collection_type,
             }
             self._available = False
 
