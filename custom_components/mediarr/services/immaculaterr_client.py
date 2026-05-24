@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import time
 from typing import Any
 
 import aiohttp
@@ -30,6 +32,7 @@ class ImmaculaterrClient:
         )
         self._authenticated = False
         self._auth_lock = asyncio.Lock()
+        self._auth_retry_after: float = 0.0
 
     @staticmethod
     def _base_headers() -> dict[str, str]:
@@ -53,12 +56,25 @@ class ImmaculaterrClient:
             ) as response:
                 if response.status not in (200, 201):
                     response_text = await response.text()
+                    if response.status == 429:
+                        retry_after = 300
+                        try:
+                            body = json.loads(response_text)
+                            retry_after = int(body.get("retryAfterSeconds", 300))
+                        except Exception:
+                            pass
+                        self._auth_retry_after = time.monotonic() + retry_after
+                        _LOGGER.warning(
+                            "Immaculaterr login rate-limited, will not retry for %ds",
+                            retry_after,
+                        )
                     raise RuntimeError(
                         "Immaculaterr login failed "
                         f"(status={response.status}, response={response_text})"
                     )
 
         self._authenticated = True
+        self._auth_retry_after = 0.0
 
     async def _ensure_authenticated(self, force: bool = False) -> None:
         if self._authenticated and not force:
@@ -67,6 +83,11 @@ class ImmaculaterrClient:
         async with self._auth_lock:
             if self._authenticated and not force:
                 return
+            remaining = self._auth_retry_after - time.monotonic()
+            if remaining > 0:
+                raise RuntimeError(
+                    f"Immaculaterr login rate-limited, skipping ({remaining:.0f}s remaining)"
+                )
             await self._login()
 
     async def _request_json(
