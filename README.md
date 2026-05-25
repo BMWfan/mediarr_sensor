@@ -2,6 +2,19 @@ Support This Project If you find this project helpful, please consider supportin
 
 
 # Mediarr for Home Assistant (inspired by upcoming media card) https://github.com/Vansmak/mediarr-card
+
+## Changelog
+
+### v0.6.1
+- **Fix:** Immaculaterr — alle Sensoren teilen sich jetzt einen gemeinsamen API-Client, um simultane Login-Versuche beim Start zu vermeiden
+- **Fix:** Immaculaterr — Rate-Limit-Backoff: nach einem 429-Fehler beim Login werden weitere Versuche für die vom Server angegebene Wartezeit blockiert statt alle 30 Sekunden erneut zu versuchen
+
+### v0.6.0
+- Immaculaterr Watched Collections: neue Sensoren auf Basis des Plex-Schau-Verlaufs (`recentlyWatched`, `changeOfTaste`)
+- Neuer Service `mediarr.reset_immaculaterr_rejected` zum Zurücksetzen abgelehnter Vorschläge
+- Config Flow: Watched Collections über die UI konfigurierbar
+- Fix: Seer Discovery Diagnose-Logs auf DEBUG-Level gesenkt (kein ERROR-Spam mehr)
+
 ## Services
 This integration provides services to interact with Overseerr/Jellyseerr and Immaculaterr Observatory. While the various trending/discover sensors and frontend card are optional, the related credentials must be configured when you want button actions from Home Assistant.
 
