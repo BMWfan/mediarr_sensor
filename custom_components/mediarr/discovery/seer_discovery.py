@@ -183,7 +183,7 @@ class SeerDiscoveryMediarrSensor(TMDBMediaSensor):
                     raise Exception(f"Failed to fetch {self._content_type}. Status: {response.status}")
                     
         except Exception as err:
-            _LOGGER.error("Error fetching %s: %s", self._content_type, err)
+            _LOGGER.error("Error fetching %s: %s", self._content_type, err or type(err).__name__)
             return None
     async def _fetch_all_requests(self):
         """Fetch all current requests from Overseerr/Jellyseerr."""
@@ -206,7 +206,7 @@ class SeerDiscoveryMediarrSensor(TMDBMediaSensor):
             
             return all_requests
         except Exception as err:
-            _LOGGER.error("Error fetching all requests: %s", err)
+            _LOGGER.error("Error fetching all requests: %s", err or type(err).__name__)
             return set()
 
     async def _process_media_items(self, data, media_type, requested_ids):
@@ -403,7 +403,7 @@ class SeerDiscoveryMediarrSensor(TMDBMediaSensor):
             self._available = True
 
         except Exception as err:
-            _LOGGER.error("Error updating %s sensor: %s", self._content_type, err)
+            _LOGGER.error("Error updating %s sensor: %s", self._content_type, err or type(err).__name__)
             self._state = 0
             self._attributes = {'data': []}
             self._available = False

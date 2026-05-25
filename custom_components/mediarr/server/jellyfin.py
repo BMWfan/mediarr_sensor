@@ -80,7 +80,7 @@ class JellyfinWebSocket:
             self._hass.async_create_task(self._listen())
             
         except Exception as err:
-            _LOGGER.error("WebSocket connection failed: %s", err)
+            _LOGGER.error("WebSocket connection failed: %s", err or type(err).__name__)
             self._connected = False
             await self.cleanup()
             await self._schedule_reconnect()
@@ -118,7 +118,7 @@ class JellyfinWebSocket:
                     break
 
         except Exception as err:
-            _LOGGER.error("WebSocket listener error: %s", err)
+            _LOGGER.error("WebSocket listener error: %s", err or type(err).__name__)
         finally:
             self._connected = False
             await self.cleanup()
@@ -284,7 +284,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                     else:
                         _LOGGER.warning("Failed to download image %s for %s: %s", image_type, item_id, response.status)
         except Exception as err:
-            _LOGGER.error("Error caching image %s for %s: %s", image_type, item_id, err)
+            _LOGGER.error("Error caching image %s for %s: %s", image_type, item_id, err or type(err).__name__)
         return None
 
     async def _clean_unused_images(self, current_ids):
@@ -302,11 +302,11 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                             image_file.unlink()
                             _LOGGER.debug("Removed unused image: %s", image_file.name)
                         except Exception as err:
-                            _LOGGER.error("Error removing image %s: %s", image_file.name, err)
+                            _LOGGER.error("Error removing image %s: %s", image_file.name, err or type(err).__name__)
 
             await self.hass.async_add_executor_job(_do_cleanup)
         except Exception as err:
-            _LOGGER.error("Error cleaning cached images: %s", err)
+            _LOGGER.error("Error cleaning cached images: %s", err or type(err).__name__)
 
     async def _get_jellyfin_images(self, item_id):
         """Get and cache images from Jellyfin."""
@@ -328,7 +328,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                 _LOGGER.debug("Successfully cached images for item %s", item_id)
             return cached_poster, cached_backdrop, cached_backdrop
         except Exception as err:
-            _LOGGER.error("Error getting Jellyfin images: %s", err)
+            _LOGGER.error("Error getting Jellyfin images: %s", err or type(err).__name__)
         return None, None, None
     
     async def _get_libraries(self):
@@ -353,7 +353,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                                 libraries['tvshows'].append(lib['Id'])
                         return libraries
         except Exception as err:
-            _LOGGER.error("Error fetching libraries: %s", err)
+            _LOGGER.error("Error fetching libraries: %s", err or type(err).__name__)
         return libraries
 
     async def _fetch_recently_added(self, library_id):
@@ -380,7 +380,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                         return await response.json()
                     return []
         except Exception as err:
-            _LOGGER.error("Error fetching recently added items: %s", err)
+            _LOGGER.error("Error fetching recently added items: %s", err or type(err).__name__)
             return []
 
     async def _process_item(self, item):
@@ -423,7 +423,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                             if not main_backdrop_url and tmdb_main:
                                 main_backdrop_url = tmdb_main
                         except Exception as err:
-                            _LOGGER.error("Error getting TMDB images for %s: %s", series_name, err)
+                            _LOGGER.error("Error getting TMDB images for %s: %s", series_name, err or type(err).__name__)
                 
                 return {
                     'title': str(item.get('SeriesName', '')),
@@ -472,7 +472,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                             if not main_backdrop_url and tmdb_main:
                                 main_backdrop_url = tmdb_main
                         except Exception as err:
-                            _LOGGER.error("Error getting TMDB images for %s: %s", title, err)
+                            _LOGGER.error("Error getting TMDB images for %s: %s", title, err or type(err).__name__)
                 
                 return {
                     'title': str(item.get('Name', 'Unknown')),
@@ -490,7 +490,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                 }
             
         except Exception as err:
-            _LOGGER.error("Error processing item: %s", err)
+            _LOGGER.error("Error processing item: %s", err or type(err).__name__)
             return None
 
     async def async_update(self):
@@ -565,7 +565,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
             self._available = True
 
         except Exception as err:
-            _LOGGER.error("Error updating Jellyfin sensor: %s", err)
+            _LOGGER.error("Error updating Jellyfin sensor: %s", err or type(err).__name__)
             self._state = 0
             self._attributes = {'data': []}
             self._available = False
@@ -594,7 +594,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
             return [cls(hass, async_get_clientsession(hass), config, user_id)]
 
         except Exception as error:
-            _LOGGER.error("Error initializing Jellyfin sensors: %s", error)
+            _LOGGER.error("Error initializing Jellyfin sensors: %s", error or type(error).__name__)
             return []
 
 

@@ -221,7 +221,7 @@ class PlexMediarrSensor(TMDBMediaSensor):
                 dt = datetime.fromtimestamp(int(timestamp))
                 return dt.strftime("%Y-%m-%d")
         except Exception as err:
-            _LOGGER.error("Error formatting date: %s", err)
+            _LOGGER.error("Error formatting date: %s", err or type(err).__name__)
         return ""
 
     async def _fetch_recently_added(self, section_id):
@@ -244,7 +244,7 @@ class PlexMediarrSensor(TMDBMediaSensor):
                     else:
                         raise Exception(f"Failed to fetch recently added: {response.status}")
         except Exception as err:
-            _LOGGER.error("Error fetching recently added: %s", err)
+            _LOGGER.error("Error fetching recently added: %s", err or type(err).__name__)
             return None
     async def _download_and_cache_image(self, url, item_id, image_type):
         """Download and cache an image from Plex."""
@@ -280,7 +280,7 @@ class PlexMediarrSensor(TMDBMediaSensor):
                         _LOGGER.warning("Failed to download image %s for %s: %s", image_type, item_id, response.status)
             return None
         except Exception as err:
-            _LOGGER.error("Error caching image %s for %s: %s", image_type, item_id, err)
+            _LOGGER.error("Error caching image %s for %s: %s", image_type, item_id, err or type(err).__name__)
             return None
 
     async def _clean_unused_images(self, current_ids):
@@ -298,11 +298,11 @@ class PlexMediarrSensor(TMDBMediaSensor):
                             image_file.unlink()
                             _LOGGER.debug("Removed unused image: %s", image_file.name)
                         except Exception as err:
-                            _LOGGER.error("Error removing image %s: %s", image_file.name, err)
+                            _LOGGER.error("Error removing image %s: %s", image_file.name, err or type(err).__name__)
 
             await self.hass.async_add_executor_job(_do_cleanup)
         except Exception as err:
-            _LOGGER.error("Error cleaning cached images: %s", err)
+            _LOGGER.error("Error cleaning cached images: %s", err or type(err).__name__)
 
     async def _get_plex_images(self, item, item_id, is_show=False):
         """Get and cache images from Plex."""
@@ -335,7 +335,7 @@ class PlexMediarrSensor(TMDBMediaSensor):
             
             return poster_url, backdrop_url, main_backdrop_url
         except Exception as err:
-            _LOGGER.error("Error getting Plex images: %s", err)
+            _LOGGER.error("Error getting Plex images: %s", err or type(err).__name__)
             return None, None, None
 
     async def _process_item(self, item):
@@ -388,7 +388,7 @@ class PlexMediarrSensor(TMDBMediaSensor):
                             if not main_backdrop_url and tmdb_main:
                                 main_backdrop_url = tmdb_main
                         except Exception as err:
-                            _LOGGER.error("Error getting TMDB images for %s: %s", show_title, err)
+                            _LOGGER.error("Error getting TMDB images for %s: %s", show_title, err or type(err).__name__)
 
                 return {
                     'title': str(show_title)[:100],
@@ -439,7 +439,7 @@ class PlexMediarrSensor(TMDBMediaSensor):
                             if not main_backdrop_url and tmdb_main:
                                 main_backdrop_url = tmdb_main
                         except Exception as err:
-                            _LOGGER.error("Error getting TMDB images for %s: %s", title, err)
+                            _LOGGER.error("Error getting TMDB images for %s: %s", title, err or type(err).__name__)
 
                 summary = str(item.get('summary', 'N/A'))
                 if len(summary) > 97:
@@ -525,7 +525,7 @@ class PlexMediarrSensor(TMDBMediaSensor):
             self._available = True
             await self._clean_unused_images(self._current_item_ids)
         except Exception as err:
-            _LOGGER.error("Error updating Plex sensor: %s", err)
+            _LOGGER.error("Error updating Plex sensor: %s", err or type(err).__name__)
             self._state = 0
             self._attributes = {'data': []}
             self._available = False
@@ -598,7 +598,7 @@ class PlexMediarrSensor(TMDBMediaSensor):
             return [cls(hass, async_get_clientsession(hass), effective_config, sections)]
 
         except Exception as error:
-            _LOGGER.error("Error initializing Plex sensors: %s", error)
+            _LOGGER.error("Error initializing Plex sensors: %s", error or type(error).__name__)
             return []
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
