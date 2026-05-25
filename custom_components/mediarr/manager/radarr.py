@@ -32,7 +32,7 @@ class RadarrMediarrSensor(MediarrSensor):
             now = datetime.now().astimezone()
             max_date = now + timedelta(days=self._days_to_check)
 
-            async with async_timeout.timeout(10):
+            async with async_timeout.timeout(30):
                 async with self._session.get(
                     f"{self._url}/api/v3/movie",
                     headers=headers
@@ -103,7 +103,7 @@ class RadarrMediarrSensor(MediarrSensor):
                     self._available = True
 
         except Exception as err:
-            _LOGGER.error("Error updating %s sensor: %s", self._name, err)
+            _LOGGER.error("Error updating %s sensor: %s", self._name, err or type(err).__name__)
             self._state = 0
             self._attributes = {'data': []}
             self._available = False

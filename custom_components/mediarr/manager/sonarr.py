@@ -43,7 +43,7 @@ class SonarrMediarrSensor(MediarrSensor):
                 'includeSeries': 'true'
             }
 
-            async with async_timeout.timeout(10):
+            async with async_timeout.timeout(30):
                 async with self._session.get(
                     f"{self._url}/api/v3/calendar",
                     headers=headers,
@@ -104,7 +104,7 @@ class SonarrMediarrSensor(MediarrSensor):
                         raise Exception(f"Failed to connect to {self._name}. Status: {response.status}")
 
         except Exception as err:
-            _LOGGER.error("Error updating %s sensor: %s", self._name, err)
+            _LOGGER.error("Error updating %s sensor: %s", self._name, err or type(err).__name__)
             self._state = 0
             self._attributes = {'data': []}
             self._available = False
