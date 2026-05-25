@@ -194,7 +194,7 @@ class ImmaculaterrMediarrSensor(TMDBMediaSensor):
             }
             self._available = True
         except Exception as err:
-            _LOGGER.error("Error updating Immaculaterr sensor (%s): %s", self._name, err)
+            _LOGGER.error("Error updating Immaculaterr sensor (%s): %s", self._name, err or type(err).__name__)
             self._state = 0
             self._attributes = {
                 "data": [],

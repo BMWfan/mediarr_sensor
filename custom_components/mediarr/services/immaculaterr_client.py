@@ -48,7 +48,7 @@ class ImmaculaterrClient:
             **self._base_headers(),
             "Content-Type": "application/json",
         }
-        async with async_timeout.timeout(10):
+        async with async_timeout.timeout(30):
             async with self._session.post(
                 f"{self._url}/api/auth/login",
                 json=payload,
