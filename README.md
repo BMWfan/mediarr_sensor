@@ -6,14 +6,14 @@ Support This Project If you find this project helpful, please consider supportin
 ## Changelog
 
 ### v0.6.1
-- **Fix:** Immaculaterr — alle Sensoren teilen sich jetzt einen gemeinsamen API-Client, um simultane Login-Versuche beim Start zu vermeiden
-- **Fix:** Immaculaterr — Rate-Limit-Backoff: nach einem 429-Fehler beim Login werden weitere Versuche für die vom Server angegebene Wartezeit blockiert statt alle 30 Sekunden erneut zu versuchen
+- **Fix:** Immaculaterr — all sensors now share a single API client to prevent simultaneous login attempts on startup
+- **Fix:** Immaculaterr — rate-limit backoff: after a 429 login failure, further attempts are blocked for the duration specified by the server instead of retrying every 30 seconds
 
 ### v0.6.0
-- Immaculaterr Watched Collections: neue Sensoren auf Basis des Plex-Schau-Verlaufs (`recentlyWatched`, `changeOfTaste`)
-- Neuer Service `mediarr.reset_immaculaterr_rejected` zum Zurücksetzen abgelehnter Vorschläge
-- Config Flow: Watched Collections über die UI konfigurierbar
-- Fix: Seer Discovery Diagnose-Logs auf DEBUG-Level gesenkt (kein ERROR-Spam mehr)
+- Immaculaterr Watched Collections: new sensors based on Plex watch history (`recentlyWatched`, `changeOfTaste`)
+- New service `mediarr.reset_immaculaterr_rejected` to reset previously rejected suggestions
+- Config Flow: Watched Collections configurable via UI
+- Fix: Seer Discovery diagnostic logs reduced to DEBUG level (no more ERROR spam)
 
 ## Services
 This integration provides services to interact with Overseerr/Jellyseerr and Immaculaterr Observatory. While the various trending/discover sensors and frontend card are optional, the related credentials must be configured when you want button actions from Home Assistant.
