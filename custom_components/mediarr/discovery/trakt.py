@@ -53,7 +53,7 @@ class TraktMediarrSensor(MediarrSensor):
                         return True
                 return False
         except Exception as err:
-            _LOGGER.error("Error getting Trakt access token: %s", err)
+            _LOGGER.error("Error getting Trakt access token: %s", err or type(err).__name__)
             return False
 
     async def _fetch_popular(self, media_type):
@@ -72,7 +72,7 @@ class TraktMediarrSensor(MediarrSensor):
                         return await self._fetch_popular(media_type)
                 return []
         except Exception as err:
-            _LOGGER.error("Error fetching Trakt %s: %s", media_type, err)
+            _LOGGER.error("Error fetching Trakt %s: %s", media_type, err or type(err).__name__)
             return []
 
     async def _fetch_tmdb_data(self, tmdb_id, media_type):
@@ -97,7 +97,7 @@ class TraktMediarrSensor(MediarrSensor):
                     }
                 return {}
         except Exception as err:
-            _LOGGER.error("Error fetching TMDB data: %s", err)
+            _LOGGER.error("Error fetching TMDB data: %s", err or type(err).__name__)
             return {}
 
     async def _process_item(self, item, media_type):
@@ -119,7 +119,7 @@ class TraktMediarrSensor(MediarrSensor):
 
             return base_item
         except Exception as err:
-            _LOGGER.error("Error processing Trakt item: %s", err)
+            _LOGGER.error("Error processing Trakt item: %s", err or type(err).__name__)
             return None
 
     async def async_update(self):
@@ -156,7 +156,7 @@ class TraktMediarrSensor(MediarrSensor):
                 self._available = False
 
         except Exception as err:
-            _LOGGER.error("Error updating Trakt sensor: %s", err)
+            _LOGGER.error("Error updating Trakt sensor: %s", err or type(err).__name__)
             self._state = None
             self._attributes = {'data': []}
             self._available = False

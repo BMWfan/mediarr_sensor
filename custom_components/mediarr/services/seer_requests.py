@@ -86,7 +86,7 @@ class SeerRequestHandler:
                             return data['results'][0]
                     return None
         except Exception as err:
-            _LOGGER.error("Error searching for media: %s", err)
+            _LOGGER.error("Error searching for media: %s", err or type(err).__name__)
             return None
         
     async def async_find_request_by_title(self, title: str, media_type: str = None) -> dict:
@@ -110,7 +110,7 @@ class SeerRequestHandler:
                                         }
                                     }
         except Exception as err:
-            _LOGGER.error("Error checking sensor data: %s", err)
+            _LOGGER.error("Error checking sensor data: %s", err or type(err).__name__)
 
         # If not found in sensor data, fall back to API search
         try:
@@ -133,7 +133,7 @@ class SeerRequestHandler:
                         _LOGGER.error("Failed to fetch requests from API. Status: %s", response.status)
                         return None
         except Exception as err:
-            _LOGGER.error("Error searching API for request: %s", err)
+            _LOGGER.error("Error searching API for request: %s", err or type(err).__name__)
             return None
     
     async def async_update_request(self, call: ServiceCall) -> bool:
@@ -192,7 +192,7 @@ class SeerRequestHandler:
                         return success
 
         except Exception as err:
-            _LOGGER.error("Error updating request: %s - Error: %s", name, err)
+            _LOGGER.error("Error updating request: %s - Error: %s", name, err or type(err).__name__)
             return False
 
     async def async_request_movie(self, call: ServiceCall) -> bool:
@@ -223,7 +223,7 @@ class SeerRequestHandler:
                                     response.status, response_text)
                     return success
         except Exception as err:
-            _LOGGER.error("Error requesting movie: %s - Error: %s", name, err)
+            _LOGGER.error("Error requesting movie: %s - Error: %s", name, err or type(err).__name__)
             return False
 
     async def async_request_tv(self, call: ServiceCall) -> bool:
@@ -274,7 +274,7 @@ class SeerRequestHandler:
                                     response.status, response_text)
                     return success
         except Exception as err:
-            _LOGGER.error("Error requesting TV show: %s - Error: %s", name, err)
+            _LOGGER.error("Error requesting TV show: %s - Error: %s", name, err or type(err).__name__)
             return False
 
     async def async_get_tv_details(self, tv_id: int) -> dict:
@@ -287,7 +287,7 @@ class SeerRequestHandler:
                         return await response.json()
                     return None
         except Exception as err:
-            _LOGGER.error("Error getting TV details: %s", err)
+            _LOGGER.error("Error getting TV details: %s", err or type(err).__name__)
             return None
 
     async def close(self):
@@ -344,7 +344,7 @@ async def async_setup_services(hass: HomeAssistant, domain: str) -> bool:
         _LOGGER.info("Successfully registered all Mediarr services")
         return True
     except Exception as err:
-        _LOGGER.error("Error setting up Mediarr services: %s", err)
+        _LOGGER.error("Error setting up Mediarr services: %s", err or type(err).__name__)
         return False
 
 

@@ -64,7 +64,7 @@ class ImmaculaterrRequestHandler:
 
             return True
         except Exception as err:
-            _LOGGER.error("Error processing Immaculaterr suggestion: %s", err)
+            _LOGGER.error("Error processing Immaculaterr suggestion: %s", err or type(err).__name__)
             return False
 
     async def async_reset_rejected(self) -> bool:
@@ -72,7 +72,7 @@ class ImmaculaterrRequestHandler:
             await self._client.async_reset_rejected()
             return True
         except Exception as err:
-            _LOGGER.error("Error resetting Immaculaterr rejected suggestions: %s", err)
+            _LOGGER.error("Error resetting Immaculaterr rejected suggestions: %s", err or type(err).__name__)
             return False
 
     async def close(self) -> None:
@@ -115,7 +115,7 @@ async def async_setup_immaculaterr_services(
             )
         return True
     except Exception as err:
-        _LOGGER.error("Error setting up Immaculaterr services: %s", err)
+        _LOGGER.error("Error setting up Immaculaterr services: %s", err or type(err).__name__)
         return False
 
 

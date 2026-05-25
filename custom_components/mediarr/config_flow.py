@@ -1132,7 +1132,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 forward_url=_build_plex_forward_url(self.hass, self.flow_id),
             )
         except Exception as err:
-            _LOGGER.error("Failed to create Plex PIN: %s", err)
+            _LOGGER.error("Failed to create Plex PIN: %s", err or type(err).__name__)
             errors["base"] = "plex_pin_init_failed"
             return self.async_show_form(
                 step_id="plex_login",
@@ -1176,7 +1176,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     await asyncio.sleep(1)
                 self._plex_auth_token = token
             except Exception as err:
-                _LOGGER.error("Failed to poll Plex PIN: %s", err)
+                _LOGGER.error("Failed to poll Plex PIN: %s", err or type(err).__name__)
                 return self._show_plex_login_action_error("plex_pin_poll_failed")
 
         if not self._plex_auth_token:
@@ -1196,7 +1196,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 plex_token=self._plex_auth_token,
             )
         except Exception as err:
-            _LOGGER.error("Failed to load Plex servers: %s", err)
+            _LOGGER.error("Failed to load Plex servers: %s", err or type(err).__name__)
             return self._show_plex_login_action_error("plex_server_fetch_failed")
 
         if not self._plex_server_resources:
@@ -1980,7 +1980,7 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                 forward_url=_build_plex_forward_url(self.hass, self.flow_id),
             )
         except Exception as err:
-            _LOGGER.error("Failed to create Plex PIN in options: %s", err)
+            _LOGGER.error("Failed to create Plex PIN in options: %s", err or type(err).__name__)
             errors["base"] = "plex_pin_init_failed"
             return self.async_show_form(
                 step_id="plex_login",
@@ -2024,7 +2024,7 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                     await asyncio.sleep(1)
                 self._plex_auth_token = token
             except Exception as err:
-                _LOGGER.error("Failed to poll Plex PIN in options: %s", err)
+                _LOGGER.error("Failed to poll Plex PIN in options: %s", err or type(err).__name__)
                 return self._show_plex_login_action_error_options("plex_pin_poll_failed")
 
         if not self._plex_auth_token:
@@ -2044,7 +2044,7 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                 plex_token=self._plex_auth_token,
             )
         except Exception as err:
-            _LOGGER.error("Failed to load Plex servers in options: %s", err)
+            _LOGGER.error("Failed to load Plex servers in options: %s", err or type(err).__name__)
             return self._show_plex_login_action_error_options("plex_server_fetch_failed")
 
         if not self._plex_server_resources:

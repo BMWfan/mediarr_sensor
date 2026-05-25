@@ -169,7 +169,7 @@ class TMDBMediaSensor(MediarrSensor, ABC):
                             _LOGGER.error("TMDB API error: %s for URL: %s", response.status, url)
                             return None
         except Exception as err:
-            _LOGGER.error("Error fetching TMDB data: %s", err)
+            _LOGGER.error("Error fetching TMDB data: %s", err or type(err).__name__)
             return None
     
 
@@ -229,7 +229,7 @@ class TMDBMediaSensor(MediarrSensor, ABC):
             return None, None, None
             
         except Exception as err:
-            _LOGGER.error("Error getting TMDB images for %s: %s", tmdb_id, err)
+            _LOGGER.error("Error getting TMDB images for %s: %s", tmdb_id, err or type(err).__name__)
             return None, None, None
 
     async def _search_tmdb(self, title, year=None, media_type='movie'):
@@ -260,7 +260,7 @@ class TMDBMediaSensor(MediarrSensor, ABC):
             return None
             
         except Exception as err:
-            _LOGGER.error("Error searching TMDB for %s: %s", title, err)
+            _LOGGER.error("Error searching TMDB for %s: %s", title, err or type(err).__name__)
             return None
 
     async def _get_tmdb_details(self, tmdb_id, media_type):
@@ -288,7 +288,7 @@ class TMDBMediaSensor(MediarrSensor, ABC):
                 
             return None
         except Exception as err:
-            _LOGGER.error("Error fetching TMDB details for %s: %s", tmdb_id, err)
+            _LOGGER.error("Error fetching TMDB details for %s: %s", tmdb_id, err or type(err).__name__)
             return None
 
     @abstractmethod

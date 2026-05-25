@@ -43,7 +43,7 @@ class SeerMediarrSensor(TMDBMediaSensor):
                         }
             return None
         except Exception as err:
-            _LOGGER.error("Error fetching TMDB details: %s", err)
+            _LOGGER.error("Error fetching TMDB details: %s", err or type(err).__name__)
             return None
 
     async def async_update(self):
@@ -139,7 +139,7 @@ class SeerMediarrSensor(TMDBMediaSensor):
                         raise Exception(f"Failed to connect to Jellyseerr/Overseerr. Status: {response.status}")
 
         except Exception as err:
-            _LOGGER.error("Error updating Jellyseerr/Overseerr sensor: %s", err)
+            _LOGGER.error("Error updating Jellyseerr/Overseerr sensor: %s", err or type(err).__name__)
             self._state = 0
             self._attributes = {'data': []}
             self._available = False
