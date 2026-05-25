@@ -26,10 +26,12 @@ class ImmaculaterrMediarrSensor(TMDBMediaSensor):
         tmdb_api_key: str | None = None,
         collection_type: str = "immaculate-taste",
         collection_kind: str = "recentlyWatched",
+        shared_client: ImmaculaterrClient | None = None,
     ) -> None:
         super().__init__(None, tmdb_api_key)
         self._url = url.rstrip("/")
-        self._client = ImmaculaterrClient(url, username, password)
+        self._owns_client = shared_client is None
+        self._client = shared_client or ImmaculaterrClient(url, username, password)
         self._session = self._client._session
         self._media_type = media_type
         self._library_section_key = str(library_section_key).strip()
@@ -204,4 +206,5 @@ class ImmaculaterrMediarrSensor(TMDBMediaSensor):
             self._available = False
 
     async def async_will_remove_from_hass(self) -> None:
-        await self._client.close()
+        if self._owns_client:
+            await self._client.close()

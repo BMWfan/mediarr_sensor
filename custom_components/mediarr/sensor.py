@@ -291,6 +291,13 @@ async def _async_build_sensors(
                 "Set movie_library_section_key and/or tv_library_section_key."
             )
 
+        from .services.immaculaterr_client import ImmaculaterrClient
+        shared_client = ImmaculaterrClient(
+            immaculaterr_config["url"],
+            immaculaterr_config["username"],
+            immaculaterr_config["password"],
+        )
+
         for movie_library_section_key in movie_library_section_keys:
             sensors.append(ImmaculaterrMediarrSensor(
                 immaculaterr_config["url"],
@@ -301,6 +308,7 @@ async def _async_build_sensors(
                 max_items,
                 mode,
                 tmdb_api_key,
+                shared_client=shared_client,
             ))
             if enable_watched:
                 sensors.append(ImmaculaterrMediarrSensor(
@@ -314,6 +322,7 @@ async def _async_build_sensors(
                     tmdb_api_key,
                     collection_type="watched",
                     collection_kind=watched_kind,
+                    shared_client=shared_client,
                 ))
 
         for tv_library_section_key in tv_library_section_keys:
@@ -326,6 +335,7 @@ async def _async_build_sensors(
                 max_items,
                 mode,
                 tmdb_api_key,
+                shared_client=shared_client,
             ))
             if enable_watched:
                 sensors.append(ImmaculaterrMediarrSensor(
@@ -339,6 +349,7 @@ async def _async_build_sensors(
                     tmdb_api_key,
                     collection_type="watched",
                     collection_kind=watched_kind,
+                    shared_client=shared_client,
                 ))
 
         if setup_yaml_immaculaterr_services:
