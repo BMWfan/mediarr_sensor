@@ -21,6 +21,50 @@ class Session:
 DETAIL={'id':7,'name':'Dark','first_air_date':'2017-12-01','overview':'Full plot','genres':[{'name':'Mystery'}],'credits':{'cast':[{'name':'Actor','character':'Pilot','profile_path':'/actor.jpg'}],'crew':[{'name':'Director','job':'Director'}]},'external_ids':{'tvdb_id':12},'vote_average':8.2}
 
 class MetadataTests(unittest.IsolatedAsyncioTestCase):
+    def test_streaming_region_and_subscription_rental_separation(self):
+        data={'watch/providers':{'results':{'DE':{'flatrate':[{'provider_id':8,'provider_name':'Netflix'}],
+            'rent':[{'provider_id':10,'provider_name':'Amazon Video'}],
+            'link':'https://www.themoviedb.org/movie/1/watch'},'US':{'flatrate':[{'provider_name':'Other'}]}}}}
+        offers=m.public_streaming(data,'DE')
+        self.assertEqual(offers['subscription'][0]['name'],'Netflix')
+        self.assertEqual(offers['rent'][0]['name'],'Amazon Video')
+        self.assertEqual(offers['buy'],[])
+        self.assertEqual(m.public_streaming(data,'FR')['subscription'],[])
+
+    async def test_catalog_search_filters_people_adult_and_invalid_ids_and_caches(self):
+        data={'total_pages':12,'results':[
+            {'id':7,'media_type':'tv','name':'Dark','first_air_date':'2017-01-01'},
+            {'id':7,'media_type':'movie','title':'Dark'},
+            {'id':8,'media_type':'person','name':'An actor'},
+            {'id':9,'media_type':'movie','title':'Adult','adult':True},
+            {'id':True,'media_type':'movie','title':'Invalid'}]}
+        session=Session([Response(data)])
+        client=m.MediaDetailsClient(session,lambda:'test-fixture-key')
+        result=await client.search(query='Dark',language='de')
+        self.assertEqual([(x['media_type'],x['tmdb_id']) for x in result['results']],[('tv',7),('movie',7)])
+        self.assertEqual(result['total_pages'],5)
+        self.assertEqual(await client.search(query='Dark',language='de'),result)
+        self.assertEqual(len(session.calls),1)
+        self.assertEqual(session.calls[0][1]['params']['include_adult'],'false')
+        self.assertNotIn('test-fixture',str(result))
+
+    async def test_catalog_validation_and_pagination(self):
+        client=m.MediaDetailsClient(Session([]),lambda:'test-fixture-key')
+        for args in [{'query':'x'},{'query':'x'*129},{'query':'valid','page':True},{'query':'valid','page':6},{'query':'valid','language':'../bad'}]:
+            with self.assertRaises(m.MediaDetailsError):await client.search(**args)
+        client=m.MediaDetailsClient(Session([]),lambda:None)
+        with self.assertRaises(m.MediaDetailsError) as error:await client.search(query='valid')
+        self.assertEqual(error.exception.code,'tmdb_not_configured')
+        session=Session([Response({'results':[],'total_pages':2})])
+        client=m.MediaDetailsClient(session,lambda:'test-fixture-key')
+        self.assertEqual((await client.search(query='valid',page=2))['page'],2)
+        self.assertEqual(session.calls[0][1]['params']['page'],2)
+
+    def test_catalog_websocket_schema(self):
+        schema=m.websocket_media_search._ws_schema
+        self.assertEqual(schema({'id':1,'type':'mediarr/search','query':'Dark'})['page'],1)
+        with self.assertRaises(Exception):schema({'id':1,'type':'mediarr/search','query':'x'})
+
     async def test_details_and_cache_do_not_expose_credentials(self):
         session=Session([Response(DETAIL)])
         client=m.MediaDetailsClient(session,lambda:'test-fixture-not-a-real-credential')

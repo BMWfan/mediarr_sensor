@@ -9,6 +9,13 @@ submit_movie_request:
       selector:
         text:
           type: text
+    tmdb_id:
+      description: Exact TMDB ID of the selected title (optional; skips title search)
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
 
 submit_tv_request:
   description: Searches for a TV show and requests the specified seasons.
@@ -20,6 +27,13 @@ submit_tv_request:
       selector:
         text:
           type: text
+    tmdb_id:
+      description: Exact TMDB ID of the selected title (optional; skips title search)
+      required: false
+      selector:
+        number:
+          min: 1
+          mode: box
     season:
       description: Which season(s) to request
       example: "latest"
