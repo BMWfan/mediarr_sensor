@@ -249,7 +249,7 @@ FNXPT
 MIT
 
 
-## Selected-title metadata (unreleased)
+## Selected-title metadata (v0.6.2+)
 
 The authenticated Home Assistant WebSocket command `mediarr/media_details`
 provides full descriptions, cast/roles, public TMDB portrait URLs, genres,
@@ -259,7 +259,7 @@ Plex/Seerr/Sonarr credentials are never substituted. No credential is returned
 to the card or placed in frontend URLs.
 
 The matching card update loads details when a sensor only has a short synopsis
-or lacks cast data. Both this backend change and the card change must be installed.
+or lacks cast data. Use mediarr-card v0.4.1 or newer with this backend update. Both components must be updated.
 Restart Home Assistant after installing the backend. Old cards continue to work.
 Requests are cached for six hours (maximum 256 entries), with at most four
 concurrent WebSocket metadata lookups. Ambiguous title searches do not silently
