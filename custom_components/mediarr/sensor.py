@@ -372,6 +372,9 @@ async def _async_build_sensors(
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up Mediarr sensors from YAML configuration."""
+    from .media_details import async_setup_metadata
+    hass.data.setdefault(DOMAIN, {})["metadata_yaml_config"] = config
+    async_setup_metadata(hass)
     sensors = await _async_build_sensors(
         hass,
         config,
