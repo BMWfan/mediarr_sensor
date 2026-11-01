@@ -247,3 +247,25 @@ FNXPT
 
 ## License
 MIT
+
+
+## Selected-title metadata (v0.6.2+)
+
+The authenticated Home Assistant WebSocket command `mediarr/media_details`
+provides full descriptions, cast/roles, public TMDB portrait URLs, genres,
+ratings and runtime for a selected title. It reuses an existing explicitly
+configured `tmdb_api_key` from Mediarr's YAML configuration or config entries;
+Plex/Seerr/Sonarr credentials are never substituted. No credential is returned
+to the card or placed in frontend URLs.
+
+The matching card update loads details when a sensor only has a short synopsis
+or lacks cast data. Use mediarr-card v0.4.1 or newer with this backend update. Both components must be updated.
+Restart Home Assistant after installing the backend. Old cards continue to work.
+Requests are cached for six hours (maximum 256 entries), with at most four
+concurrent WebSocket metadata lookups. Ambiguous title searches do not silently
+pick the first movie/series result. Errors distinguish missing credentials,
+rejected authentication, missing/ambiguous titles and temporary availability.
+
+Tests: with Home Assistant's Python dependencies installed, run
+`python -m unittest discover -s tests -v`. These tests use a fake TMDB transport;
+they do not require or expose a real TMDB key.

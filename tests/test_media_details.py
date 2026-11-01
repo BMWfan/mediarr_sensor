@@ -1,0 +1,69 @@
+"""Run with HA installed: python -m unittest discover -s tests."""
+import importlib.util
+from pathlib import Path
+import unittest
+
+spec=importlib.util.spec_from_file_location('media_details',Path(__file__).parents[1]/'custom_components/mediarr/media_details.py')
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+
+class Response:
+    def __init__(self,data,status=200):self.data=data;self.status=status
+    async def __aenter__(self):return self
+    async def __aexit__(self,*args):pass
+    async def json(self):return self.data
+
+class Session:
+    def __init__(self,responses):self.responses=list(responses);self.calls=[]
+    def get(self,url,**kwargs):
+        self.calls.append((url,kwargs))
+        return self.responses.pop(0)
+
+DETAIL={'id':7,'name':'Dark','first_air_date':'2017-12-01','overview':'Full plot','genres':[{'name':'Mystery'}],'credits':{'cast':[{'name':'Actor','character':'Pilot','profile_path':'/actor.jpg'}],'crew':[{'name':'Director','job':'Director'}]},'external_ids':{'tvdb_id':12},'vote_average':8.2}
+
+class MetadataTests(unittest.IsolatedAsyncioTestCase):
+    async def test_details_and_cache_do_not_expose_credentials(self):
+        session=Session([Response(DETAIL)])
+        client=m.MediaDetailsClient(session,lambda:'test-fixture-not-a-real-credential')
+        result=await client.details(media_type='tv',tmdb_id=7,language='de')
+        again=await client.details(media_type='tv',tmdb_id=7,language='de')
+        self.assertEqual(result,again);self.assertEqual(len(session.calls),1)
+        self.assertEqual(result['cast'][0]['character'],'Pilot');self.assertEqual(result['year'],'2017')
+        self.assertNotIn('test-fixture',str(result));self.assertIn('credits,external_ids',session.calls[0][1]['params']['append_to_response'])
+
+    async def test_title_search_uses_correct_type_not_first_result(self):
+        session=Session([Response({'results':[{'id':1,'title':'Other'},{'id':7,'name':'Dark','first_air_date':'2017-12-01'}]}),Response(DETAIL)])
+        client=m.MediaDetailsClient(session,lambda:'test-fixture-key')
+        result=await client.details(media_type='tv',title='Dark',year=2017)
+        self.assertEqual(result['tmdb_id'],7);self.assertTrue(session.calls[0][0].endswith('/search/tv'))
+
+    async def test_ambiguous_film_series_is_not_guessed(self):
+        session=Session([Response({'results':[{'id':1,'title':'Same','media_type':'movie'},{'id':2,'name':'Same','media_type':'tv'}]})])
+        client=m.MediaDetailsClient(session,lambda:'test-fixture-key')
+        with self.assertRaises(m.MediaDetailsError) as error:await client.details(title='Same')
+        self.assertEqual(error.exception.code,'metadata_ambiguous');self.assertEqual(len(session.calls),1)
+
+    async def test_missing_key_and_invalid_input_do_not_make_requests(self):
+        session=Session([]);client=m.MediaDetailsClient(session,lambda:None)
+        with self.assertRaises(m.MediaDetailsError) as error:await client.details(media_type='movie',tmdb_id=1)
+        self.assertEqual(error.exception.code,'tmdb_not_configured')
+        for kwargs in [{'media_type':'../../private','tmdb_id':1},{'media_type':'movie','tmdb_id':True},{'title':'x','language':'../bad'},{'title':'x','year':True}]:
+            with self.assertRaises(m.MediaDetailsError):await client.details(**kwargs)
+        self.assertEqual(session.calls,[])
+
+    async def test_rejected_auth_error_is_safe(self):
+        session=Session([Response({},401)]);client=m.MediaDetailsClient(session,lambda:'test-fixture-key')
+        with self.assertRaises(m.MediaDetailsError) as error:await client.details(media_type='movie',tmdb_id=7)
+        self.assertEqual(error.exception.code,'metadata_auth');self.assertNotIn('test-fixture-key',str(error.exception))
+
+    def test_key_resolver_never_uses_unrelated_api_key(self):
+        self.assertIsNone(m.resolve_tmdb_key({'entries':{'x':{'seer':{'api_key':'not-a-tmdb-key'}}}}))
+        self.assertEqual(m.resolve_tmdb_key({'entries':{'x':{'plex':{'tmdb_api_key':'tmdb-fixture'}}}}),'tmdb-fixture')
+
+    def test_websocket_command_uses_actual_homeassistant_decorator(self):
+        self.assertEqual(m.websocket_media_details._ws_command,'mediarr/media_details')
+        schema=m.websocket_media_details._ws_schema
+        parsed=schema({'id':1,'type':'mediarr/media_details','media_type':'tv','tmdb_id':7,'title':'Dark','language':'de'})
+        self.assertEqual(parsed['tmdb_id'],7)
+        with self.assertRaises(Exception):schema({'id':2,'type':'mediarr/media_details','unexpected':'not accepted'})
+
+if __name__=='__main__':unittest.main()

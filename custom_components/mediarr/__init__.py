@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from .config_helpers import get_entry_config
+from .media_details import async_setup_metadata
 from .services.seer_requests import (
     SeerRequestHandler,
     async_setup_services,
@@ -129,12 +130,14 @@ def _any_entry_uses(domain_data: dict[str, Any], provider: str) -> bool:
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Set up the Mediarr component."""
     _ensure_plex_auth_callback_view(hass)
+    async_setup_metadata(hass)
 
     if DOMAIN not in config:
         return True
 
     domain_data = _ensure_domain_data(hass)
     domain_config = config[DOMAIN]
+    domain_data["yaml_config"] = domain_config
 
     seer_config = domain_config.get("seer")
     if seer_config:
@@ -167,6 +170,7 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Mediarr from a config entry."""
     _ensure_plex_auth_callback_view(hass)
+    async_setup_metadata(hass)
     domain_data = _ensure_domain_data(hass)
     entry_config = get_entry_config(entry)
     domain_data["entries"][entry.entry_id] = entry_config
@@ -231,6 +235,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         not domain_data.get("entries")
         and "seer_request_handler" not in domain_data
         and "immaculaterr_request_handler" not in domain_data
+        and "metadata_client" not in domain_data
     ):
         hass.data.pop(DOMAIN, None)
 
