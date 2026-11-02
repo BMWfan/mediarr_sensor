@@ -7,6 +7,22 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.7.0
+- Authenticated `mediarr/search` catalog search with bounded pagination and caching.
+- `mediarr/library` loads complete Plex movie/show sections, including watched
+  titles, and Radarr/Sonarr managed lists with queue progress. Sources come from
+  existing Mediarr configuration; no credentials are sent to the card.
+- Plex artwork uses authenticated, temporary signed Home Assistant image URLs.
+- Discovery remains supplied by existing integrations, without a new
+  recommendation engine or imitation of Netflix predictions.
+- Regional streaming offers distinguish subscriptions, rentals and purchases.
+- Movie/TV request services accept optional `tmdb_id` and propagate rejected
+  requests to Home Assistant instead of reporting apparent success.
+- Pair with card 0.5.0. Configure Plex, explicit TMDB credentials and optional
+  Radarr/Sonarr sources in Mediarr. Seerr remains required for request actions.
+- Plex watch history is for the configured token's account. This does not connect
+  personal Netflix/Prime accounts, import their exports or authorize a TMDB account.
+
 ### v0.6.1
 - **Fix:** Immaculaterr — all sensors now share a single API client to prevent simultaneous login attempts on startup
 - **Fix:** Immaculaterr — rate-limit backoff: after a 429 login failure, further attempts are blocked for the duration specified by the server instead of retrying every 30 seconds

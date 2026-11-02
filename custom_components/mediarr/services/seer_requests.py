@@ -2,6 +2,7 @@ import logging
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
+from homeassistant.exceptions import HomeAssistantError
 import aiohttp
 import urllib.parse
 import async_timeout
@@ -27,12 +28,21 @@ from ..common.const import (
 )
 
 # Schema Definitions
+def positive_tmdb_id(value):
+    """TMDB IDs are positive integers, not booleans or coerced strings."""
+    if type(value) is not int or value <= 0:
+        raise vol.Invalid("Expected a positive TMDB identifier")
+    return value
+
+
 MOVIE_REQUEST_SCHEMA = vol.Schema({
     vol.Required(ATTR_REQUEST_NAME): cv.string,
+    vol.Optional("tmdb_id"): positive_tmdb_id,
 })
 
 TV_REQUEST_SCHEMA = vol.Schema({
     vol.Required(ATTR_REQUEST_NAME): cv.string,
+    vol.Optional("tmdb_id"): positive_tmdb_id,
     vol.Optional(ATTR_REQUEST_SEASON, default=DEFAULT_REQUEST_SEASON): vol.In(
         ["first", "latest", "all"]
     ),
@@ -198,7 +208,7 @@ class SeerRequestHandler:
     async def async_request_movie(self, call: ServiceCall) -> bool:
         """Handle movie request service calls."""
         name = call.data[ATTR_REQUEST_NAME]
-        movie = await self.async_search_media(name, SEARCH_TYPE_MOVIE)
+        movie = {"id": call.data["tmdb_id"]} if call.data.get("tmdb_id") else await self.async_search_media(name, SEARCH_TYPE_MOVIE)
         if not movie:
             _LOGGER.error("No movie found with name: %s", name)
             return False
@@ -231,7 +241,7 @@ class SeerRequestHandler:
         name = call.data[ATTR_REQUEST_NAME]
         season = call.data.get(ATTR_REQUEST_SEASON, DEFAULT_REQUEST_SEASON)
         
-        show = await self.async_search_media(name, SEARCH_TYPE_TV)
+        show = {"id": call.data["tmdb_id"]} if call.data.get("tmdb_id") else await self.async_search_media(name, SEARCH_TYPE_TV)
         if not show:
             _LOGGER.error("No TV show found with name: %s", name)
             return False
@@ -302,14 +312,14 @@ async def async_setup_services(hass: HomeAssistant, domain: str) -> bool:
     async def handle_movie_request(call: ServiceCall):
         """Handle a movie request service call."""
         handler = hass.data[domain].get("seer_request_handler")
-        if handler:
-            await handler.async_request_movie(call)
+        if not handler or not await handler.async_request_movie(call):
+            raise HomeAssistantError("The movie request could not be accepted by Seerr.")
 
     async def handle_tv_request(call: ServiceCall):
         """Handle a TV show request service call."""
         handler = hass.data[domain].get("seer_request_handler")
-        if handler:
-            await handler.async_request_tv(call)
+        if not handler or not await handler.async_request_tv(call):
+            raise HomeAssistantError("The series request could not be accepted by Seerr.")
 
     async def handle_update_request(call: ServiceCall):
         """Handle an update request service call."""
