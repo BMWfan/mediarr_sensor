@@ -1,3 +1,5 @@
+<p align="center"><img src="custom_components/mediarr/brand/icon.png" width="72" height="72" alt="Mediarr clapperboard icon"></p>
+
 Support This Project If you find this project helpful, please consider supporting it. Your contributions help maintain and improve the project. Any support is greatly appreciated! ❤️ https://buymeacoffee.com/vansmak Thank you for your support!
 
 
