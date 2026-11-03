@@ -7,6 +7,26 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.1 — Cinema developer backend
+
+- Pair with Mediarr Card 0.6.0-dev.1; install via HACS beta versions and restart HA.
+- Adds `mediarr/cinema`: trending, upcoming movie/TV releases and TMDB's native
+  per-account recommendations. No locally trained or scored recommendation engine.
+- Adds `mediarr/tmdb_account`: status/start/finish/disconnect for the current HA
+  user. Add the optional **TMDB API Read Access Token** in the integration's TMDB
+  options, keeping the existing API key. Approve the browser link from the card,
+  then confirm in the card. Account credentials stay in private HA storage and
+  responses never include long-lived tokens. Connections are isolated by HA user.
+- Adds `mediarr/collections`: reads existing Plex collections and dynamic smart
+  collection membership on demand, without modifying Plex.
+- Plex catalog returns added dates, in-progress state and signed backdrop artwork.
+  Manager releases distinguish cinema, digital, disc and next-episode dates.
+- Adds `mediarr/players` / `mediarr/play`: only permitted HA Plex player entities
+  are listed/controlled. Playback delegates an exact server/item URI to HA's
+  official Plex integration with the requesting user's context. Open Plex on the
+  TV to make its player available; an Android TV entity alone is insufficient.
+- Main/stable versions remain unchanged pending explicit approval after testing.
+
 ### v0.7.0
 - Authenticated `mediarr/search` catalog search with bounded pagination and caching.
 - `mediarr/library` loads complete Plex movie/show sections, including watched

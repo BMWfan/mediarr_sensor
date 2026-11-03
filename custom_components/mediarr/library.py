@@ -92,6 +92,12 @@ def plex_item(raw):
         "watched": watched,
         "has_watched": bool(raw.get("viewCount") or raw.get("viewedLeafCount")),
         "last_watched": raw.get("lastViewedAt", 0),
+        "added": raw.get("addedAt", 0),
+        "in_progress": bool(raw.get("viewOffset", 0))
+        or (
+            kind == "tv" and 0 < raw.get("viewedLeafCount", 0) < raw.get("leafCount", 0)
+        ),
+        "_has_art": bool(raw.get("art")),
         "key": str(raw.get("ratingKey", "")),
         "cast": [
             {"name": x.get("tag", ""), "character": x.get("role", "")}
@@ -281,6 +287,28 @@ class LibraryClient:
                                 "overview": raw.get("overview", ""),
                                 "has_file": has_file,
                                 "monitored": raw.get("monitored", True),
+                                "release_date": (
+                                    (
+                                        raw.get("digitalRelease")
+                                        or raw.get("physicalRelease")
+                                        or raw.get("inCinemas")
+                                    )
+                                    if kind == "movie"
+                                    else raw.get("nextAiring")
+                                ),
+                                "release_kind": (
+                                    (
+                                        "digital"
+                                        if raw.get("digitalRelease")
+                                        else (
+                                            "physical"
+                                            if raw.get("physicalRelease")
+                                            else "cinema"
+                                        )
+                                    )
+                                    if kind == "movie"
+                                    else "episode"
+                                ),
                                 **downloads.get(raw.get("id"), {}),
                             }
                             # Unmonitored existing titles still belong to the managed catalog.
@@ -296,8 +324,11 @@ class LibraryImageView(HomeAssistantView):
     url = "/api/mediarr/library_image/{source_id}/{rating_key}"
     name = "api:mediarr:library_image"
     requires_auth = True
+    extra_urls = ["/api/mediarr/library_image/{source_id}/{rating_key}/{image_type}"]
 
-    async def get(self, request, source_id, rating_key):
+    async def get(self, request, source_id, rating_key, image_type="thumb"):
+        if image_type not in {"thumb", "art"}:
+            raise web.HTTPNotFound()
         if not source_id.isdigit() or not rating_key.isdigit():
             raise web.HTTPNotFound()
         hass = request.app[KEY_HASS]
@@ -309,7 +340,7 @@ class LibraryImageView(HomeAssistantView):
             raise web.HTTPNotFound()
         try:
             async with async_get_clientsession(hass).get(
-                source["url"] + f"/library/metadata/{rating_key}/thumb",
+                source["url"] + f"/library/metadata/{rating_key}/{image_type}",
                 headers={"X-Plex-Token": source["token"]},
                 allow_redirects=False,
                 ssl=None if source.get("verify_ssl", True) else False,
@@ -378,6 +409,18 @@ async def websocket_library(hass, connection, msg):
                     )
                     client.image_urls[cache_key] = cached
                 public["poster"] = cached[1]
+                public["library_key"] = f"{item['_image_source']}:{item['key']}"
+                if item.get("_has_art"):
+                    art_path = path + "/art"
+                    art_key = (connection.user.id, art_path)
+                    art = client.image_urls.get(art_key)
+                    if not art or time.monotonic() - art[0] > 3600:
+                        art = (
+                            time.monotonic(),
+                            async_sign_path(hass, art_path, timedelta(hours=2)),
+                        )
+                        client.image_urls[art_key] = art
+                    public["banner"] = art[1]
                 public["key"] = f"/library/metadata/{item['key']}"
             groups[provider].append(public)
         connection.send_result(
@@ -400,3 +443,6 @@ def async_setup_library(hass):
     hass.data[DOMAIN]["library_client"] = LibraryClient(hass)
     websocket_api.async_register_command(hass, websocket_library)
     hass.http.register_view(LibraryImageView)
+    from .collections import websocket_collections
+
+    websocket_api.async_register_command(hass, websocket_collections)

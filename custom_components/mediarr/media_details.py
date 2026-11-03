@@ -258,3 +258,7 @@ def async_setup_metadata(hass) -> None:
     websocket_api.async_register_command(hass, websocket_media_search)
     from .library import async_setup_library
     async_setup_library(hass)
+    from .cinema import async_setup_cinema
+    async_setup_cinema(hass)
+    from .playback import async_setup_playback
+    async_setup_playback(hass)
