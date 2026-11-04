@@ -5,6 +5,39 @@ from custom_components.mediarr import playback as m
 
 
 class PlaybackTests(unittest.IsolatedAsyncioTestCase):
+    def test_offline_and_disabled_players_are_distinguished(self):
+        entries = [
+            SimpleNamespace(
+                domain="media_player",
+                platform="plex",
+                entity_id="media_player." + name,
+                disabled_by="user" if name == "disabled" else None,
+            )
+            for name in ["disabled", "missing", "offline"]
+        ]
+        user = SimpleNamespace(
+            permissions=SimpleNamespace(check_entity=lambda *args: True)
+        )
+        hass = SimpleNamespace(
+            states=SimpleNamespace(
+                get=lambda entity: (
+                    SimpleNamespace(state="unavailable", attributes={})
+                    if entity.endswith("offline")
+                    else None
+                )
+            )
+        )
+        with patch.object(
+            m.er,
+            "async_get",
+            return_value=SimpleNamespace(entities={x.entity_id: x for x in entries}),
+        ):
+            result = m.players(hass, user)
+        self.assertEqual(
+            [x["reason"] for x in result], ["disabled", "not_loaded", "unavailable"]
+        )
+        self.assertTrue(all(not x["available"] for x in result))
+
     def test_player_list_hides_unauthorized_entities(self):
         entries = [
             SimpleNamespace(
@@ -41,6 +74,7 @@ class PlaybackTests(unittest.IsolatedAsyncioTestCase):
                         "entity_id": "media_player.allowed",
                         "name": "Allowed Plex",
                         "available": True,
+                        "reason": "available",
                     }
                 ],
             )

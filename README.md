@@ -7,6 +7,16 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.3 — Explain player availability
+
+- Pair with Card 0.6.0-dev.4. Player status distinguishes disabled, not loaded,
+  unknown and unavailable entities. Permission filtering remains enforced.
+- Refreshing the card's player list rereads current HA state; it does not wake
+  devices or reload integrations. Open Plex on the target and allow remote
+  control, then refresh. Enable disabled entities in HA settings when needed.
+- This release does not claim to fix server/network/client availability, and
+  retains exact server/item playback delegation. Main/stable remain unchanged.
+
 ### v0.8.0-dev.2 — Episode progress, trailers and waiting-title artwork
 
 - Pair with Mediarr Card 0.6.0-dev.3; update this integration first and restart HA.

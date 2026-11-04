@@ -19,6 +19,19 @@ def players(hass, user):
         ):
             continue
         state = hass.states.get(entry.entity_id)
+        reason = (
+            "disabled"
+            if getattr(entry, "disabled_by", None)
+            else (
+                "not_loaded"
+                if not state
+                else (
+                    state.state
+                    if state.state in {"unknown", "unavailable"}
+                    else "available"
+                )
+            )
+        )
         result.append(
             {
                 "entity_id": entry.entity_id,
@@ -27,9 +40,8 @@ def players(hass, user):
                     if state
                     else entry.entity_id
                 ),
-                "available": bool(
-                    state and state.state not in {"unknown", "unavailable"}
-                ),
+                "available": reason == "available",
+                "reason": reason,
             }
         )
     return result
