@@ -7,6 +7,20 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.2 — Episode progress, trailers and waiting-title artwork
+
+- Pair with Mediarr Card 0.6.0-dev.3; update this integration first and restart HA.
+- Read Plex episode state in paged section queries, not per-episode requests.
+  Summarize available unplayed regular episodes after the furthest watched or
+  partially played position. Ignore old gaps and specials; include later seasons.
+  Return compact episode ranges per show, using the configured Plex account.
+  Unavailable/incomplete episode queries are explicit and retain the library.
+- Metadata includes an official YouTube trailer, preferring the user's language
+  with English fallback. Only validated video IDs become external links.
+- Manager snapshots now include public CDN poster/fanart URLs. Manager credentials
+  and private image URLs never reach the browser; queries are stripped.
+- Developer prerelease only; main/stable remain unchanged pending approval.
+
 ### v0.8.0-dev.1 — Cinema developer backend
 
 - Pair with Mediarr Card 0.6.0-dev.1; install via HACS beta versions and restart HA.

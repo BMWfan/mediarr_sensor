@@ -91,6 +91,16 @@ def public_streaming(data, region):
             "buy":providers("buy"),"link":link}
 
 
+def public_trailer(data, language):
+    videos = [video for video in data.get("videos", {}).get("results", [])
+              if video.get("site") == "YouTube" and video.get("type") == "Trailer"
+              and video.get("official") is True
+              and re.fullmatch(r"[A-Za-z0-9_-]{11}", str(video.get("key", "")))]
+    videos.sort(key=lambda video: video.get("iso_639_1") != language.split("-")[0])
+    return {"url": "https://www.youtube.com/watch?v=" + videos[0]["key"],
+            "name": str(videos[0].get("name", "Trailer"))} if videos else None
+
+
 class MediaDetailsClient:
     """Fetch selected-title details with bounded caching and safe errors."""
 
@@ -195,9 +205,10 @@ class MediaDetailsClient:
                 code = "metadata_ambiguous" if matches else "metadata_not_found"
                 raise MediaDetailsError(code, "This title could not be identified unambiguously.")
             media_type, tmdb_id = next(iter(matches))
-        data = await self._get(f"{media_type}/{tmdb_id}", key, language, append_to_response="credits,external_ids,watch/providers")
+        data = await self._get(f"{media_type}/{tmdb_id}", key, language, append_to_response="credits,external_ids,watch/providers,videos", include_video_language=f"{language.split('-')[0]},en,null")
         result = public_details(data, media_type)
         result["streaming"]=public_streaming(data,region)
+        result["trailer"]=public_trailer(data,language)
         self.cache[cache_key] = (time.monotonic(), result)
         self.cache.move_to_end(cache_key)
         while len(self.cache) > CACHE_LIMIT:

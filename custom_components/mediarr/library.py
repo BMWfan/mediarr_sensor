@@ -6,6 +6,7 @@ import asyncio
 from datetime import timedelta
 import re
 import time
+from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
 from aiohttp import web
@@ -16,6 +17,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .media_details import DOMAIN, MediaDetailsError, public_details, ws_schema
 from .server.plex import _resolve_connection_config
+from .series_progress import section_episode_progress, episode_progress
 
 
 def configured_sources(hass):
@@ -53,6 +55,23 @@ def configured_sources(hass):
                 }
             )
     return sources
+
+
+def manager_artwork(raw, cover_type):
+    """Expose public CDN artwork, never authenticated manager URLs or queries."""
+    for image in raw.get("images") or []:
+        if not isinstance(image, dict) or image.get("coverType") != cover_type:
+            continue
+        try:
+            parts = urlsplit(str(image.get("remoteUrl") or ""))
+            port = parts.port
+        except ValueError:
+            continue
+        if parts.scheme == "https" and parts.hostname in {
+            "image.tmdb.org", "artworks.thetvdb.com", "www.thetvdb.com", "thetvdb.com", "assets.fanart.tv"
+        } and not parts.username and not parts.password and port in (None, 443):
+            return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    return ""
 
 
 def plex_item(raw):
@@ -98,6 +117,7 @@ def plex_item(raw):
             kind == "tv" and 0 < raw.get("viewedLeafCount", 0) < raw.get("leafCount", 0)
         ),
         "_has_art": bool(raw.get("art")),
+        "_episode_count": raw.get("leafCount"),
         "key": str(raw.get("ratingKey", "")),
         "cast": [
             {"name": x.get("tag", ""), "character": x.get("role", "")}
@@ -206,6 +226,7 @@ class LibraryClient:
                             if not key.isdigit():
                                 continue
                             start = 0
+                            section_items = []
                             while True:
                                 container = (
                                     await self.get(
@@ -224,6 +245,7 @@ class LibraryClient:
                                     if item["key"].isdigit():
                                         item["_image_source"] = index
                                     groups["plex"].append(item)
+                                    section_items.append(item)
                                 start += len(records)
                                 total = int(
                                     container.get(
@@ -237,6 +259,25 @@ class LibraryClient:
                                         "library_incomplete",
                                         "Plex returned an incomplete library page.",
                                     )
+                            if section.get("type") == "show":
+                                try:
+                                    progress = await section_episode_progress(
+                                        self, source, key
+                                    )
+                                    for item in section_items:
+                                        item["episode_progress"] = progress.get(
+                                            item["key"],
+                                            episode_progress([])
+                                            if item.get("_episode_count") == 0
+                                            else {"available": False},
+                                        )
+                                except MediaDetailsError:
+                                    for item in section_items:
+                                        item["episode_progress"] = {"available": False}
+                                    errors.append({
+                                        "provider": "plex",
+                                        "code": "episode_progress_unavailable",
+                                    })
                     else:
                         provider = source["provider"]
                         kind = "movie" if provider == "radarr" else "tv"
@@ -285,6 +326,8 @@ class LibraryClient:
                                 "tvdb_id": raw.get("tvdbId"),
                                 "imdb_id": raw.get("imdbId"),
                                 "overview": raw.get("overview", ""),
+                                "poster": manager_artwork(raw, "poster"),
+                                "banner": manager_artwork(raw, "fanart"),
                                 "has_file": has_file,
                                 "monitored": raw.get("monitored", True),
                                 "release_date": (
