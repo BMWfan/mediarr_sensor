@@ -99,6 +99,16 @@ class MetadataTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(m.MediaDetailsError) as error:await client.details(media_type='movie',tmdb_id=7)
         self.assertEqual(error.exception.code,'metadata_auth');self.assertNotIn('test-fixture-key',str(error.exception))
 
+    async def test_tmdb_read_token_uses_bearer_auth_without_query_parameter(self):
+        session=Session([Response(DETAIL)])
+        client=m.MediaDetailsClient(session,lambda:'v4-fixture-token')
+        await client.details(media_type='tv',tmdb_id=7)
+        request=session.calls[0][1]
+        scheme, token = request['headers']['Authorization'].split(' ',1)
+        self.assertEqual(scheme,'Bearer')
+        self.assertEqual(token,client.key_resolver())
+        self.assertNotIn('api_key',request['params'])
+
     def test_key_resolver_never_uses_unrelated_api_key(self):
         self.assertIsNone(m.resolve_tmdb_key({'entries':{'x':{'seer':{'api_key':'not-a-tmdb-key'}}}}))
         self.assertEqual(m.resolve_tmdb_key({'entries':{'x':{'plex':{'tmdb_api_key':'tmdb-fixture'}}}}),'tmdb-fixture')
