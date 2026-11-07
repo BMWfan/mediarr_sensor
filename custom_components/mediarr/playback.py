@@ -3,6 +3,7 @@
 import re
 from homeassistant.auth.permissions.const import POLICY_CONTROL
 from homeassistant.components import websocket_api
+from homeassistant.components.media_player import MediaPlayerEntityFeature
 from homeassistant.core import Context
 from homeassistant.helpers import entity_registry as er
 from .library import configured_sources
@@ -42,6 +43,26 @@ def players(hass, user):
                 ),
                 "available": reason == "available",
                 "reason": reason,
+                "state": state.state if state else "unavailable",
+                "title": (
+                    str(
+                        state.attributes.get("media_title")
+                        or state.attributes.get("media_series_title")
+                        or ""
+                    )
+                    if state
+                    else ""
+                ),
+                "can_pause": bool(
+                    state
+                    and int(state.attributes.get("supported_features", 0) or 0)
+                    & MediaPlayerEntityFeature.PAUSE
+                ),
+                "can_resume": bool(
+                    state
+                    and int(state.attributes.get("supported_features", 0) or 0)
+                    & MediaPlayerEntityFeature.PLAY
+                ),
             }
         )
     return result
@@ -105,6 +126,59 @@ async def websocket_players(hass, connection, msg):
     connection.send_result(msg["id"], {"players": players(hass, connection.user)})
 
 
+async def control_playback(hass, user, entity_id, action):
+    player = next(
+        (
+            p
+            for p in players(hass, user)
+            if p["entity_id"] == entity_id and p["available"]
+        ),
+        None,
+    )
+    if (
+        action not in {"pause", "resume"}
+        or not player
+        or not player.get("can_" + action)
+        or player["state"] != ("playing" if action == "pause" else "paused")
+    ):
+        raise MediaDetailsError(
+            "playback_unavailable",
+            "This player cannot accept the requested playback control.",
+        )
+    try:
+        await hass.services.async_call(
+            "media_player",
+            "media_pause" if action == "pause" else "media_play",
+            {"entity_id": entity_id},
+            blocking=True,
+            context=Context(user_id=user.id),
+        )
+    except Exception:
+        raise MediaDetailsError(
+            "playback_unavailable", "The player could not accept the playback control."
+        ) from None
+    return {"accepted": True}
+
+
+@websocket_api.websocket_command(
+    {
+        "type": "mediarr/playback_control",
+        ws_schema.Required("entity_id"): str,
+        ws_schema.Required("action"): ws_schema.In(["pause", "resume"]),
+    }
+)
+@websocket_api.async_response
+async def websocket_playback_control(hass, connection, msg):
+    try:
+        result = await control_playback(
+            hass, connection.user, msg["entity_id"], msg["action"]
+        )
+    except MediaDetailsError as error:
+        connection.send_error(msg["id"], error.code, str(error))
+    else:
+        connection.send_result(msg["id"], result)
+
+
 @websocket_api.websocket_command(
     {
         "type": "mediarr/play",
@@ -125,3 +199,4 @@ async def websocket_play(hass, connection, msg):
 def async_setup_playback(hass):
     websocket_api.async_register_command(hass, websocket_players)
     websocket_api.async_register_command(hass, websocket_play)
+    websocket_api.async_register_command(hass, websocket_playback_control)

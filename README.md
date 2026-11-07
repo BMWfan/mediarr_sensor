@@ -7,6 +7,17 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.4 — Current playback and pause/resume
+
+- Pair with Card 0.6.0-dev.5; restart HA after installing this integration.
+- `mediarr/players` includes current state, title and pause/resume capabilities
+  for permitted Plex player entities. The card displays active devices separately.
+- `mediarr/playback_control` pauses/resumes a selected authorized, available player
+  in the appropriate state, using HA services with the requesting user's context.
+  Unsupported, offline and unauthorized targets are rejected. Service failures
+  never produce successful command acknowledgements.
+- Main/stable remain unchanged until user testing and explicit approval.
+
 ### v0.8.0-dev.3 — Explain player availability
 
 - Pair with Card 0.6.0-dev.4. Player status distinguishes disabled, not loaded,
