@@ -7,6 +7,15 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.6 — Owner-controlled publication
+
+- Publication no longer runs on main pushes. Manual dispatch requires an
+  approved release type and exact manifest-version confirmation.
+- Developer versions cannot be stable/latest; stable publication requires the
+  reviewed main branch and a plain stable version. Existing tags are preserved.
+- Six regression tests execute the actual workflow guard with synthetic inputs;
+  no workflow publication is performed. Runtime/API behavior is unchanged.
+
 ### v0.8.0-dev.5 — Request fixes and connection checks
 
 - Pair with Card 0.6.0-dev.6 and restart Home Assistant after installation.
