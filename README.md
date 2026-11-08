@@ -7,6 +7,20 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.5 — Request fixes and connection checks
+
+- Pair with Card 0.6.0-dev.6 and restart Home Assistant after installation.
+- `mediarr/request_capabilities` reads Seerr auth and non-sensitive service APIs
+  to verify its default Radarr/Sonarr targets, profiles and root folders. It also
+  checks configured TMDB and optional Immaculaterr connectivity. Only availability
+  and safe reason codes are returned; no URLs, keys, profile names or root paths.
+- Checks use bounded timeouts and a shared 10-second cache. They never add test
+  media or change manager settings. Card checks repeat every 30 seconds; network
+  state may still change between checking and executing a command.
+- Fix double-encoded title searches and prevent movie/series cross-type fallback.
+  A failed latest-season lookup no longer silently requests season one.
+- Developer prerelease only; stable/main remain unchanged.
+
 ### v0.8.0-dev.4 — Current playback and pause/resume
 
 - Pair with Card 0.6.0-dev.5; restart HA after installing this integration.

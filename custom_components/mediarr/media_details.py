@@ -273,3 +273,5 @@ def async_setup_metadata(hass) -> None:
     async_setup_cinema(hass)
     from .playback import async_setup_playback
     async_setup_playback(hass)
+    from .request_capabilities import async_setup_request_capabilities
+    async_setup_request_capabilities(hass)
