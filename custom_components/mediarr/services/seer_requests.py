@@ -4,7 +4,6 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.exceptions import HomeAssistantError
 import aiohttp
-import urllib.parse
 import async_timeout
 
 _LOGGER = logging.getLogger(__name__)
@@ -76,8 +75,7 @@ class SeerRequestHandler:
         """Search for media in Jellyseerr/Overseerr."""
         try:
             # URL encode the query properly
-            encoded_query = urllib.parse.quote(query)
-            params = {'query': encoded_query}
+            params = {'query': query}
             search_url = f"{self._url}/api/v1/search"
                 
             _LOGGER.debug("Searching with URL: %s, params: %s", search_url, params)
@@ -93,6 +91,7 @@ class SeerRequestHandler:
                                 _LOGGER.debug("Filtered results for type %s: %s", media_type, filtered)
                                 if filtered:
                                     return filtered[0]
+                                return None
                             return data['results'][0]
                     return None
         except Exception as err:
@@ -252,14 +251,18 @@ class SeerRequestHandler:
         elif season == "latest":
             # Get all seasons to find latest
             url = f"{self._url}/api/v1/tv/{show['id']}"
-            async with async_timeout.timeout(10):
-                async with self._session.get(url, headers=self._headers) as response:
-                    if response.status == 200:
+            try:
+                async with async_timeout.timeout(10):
+                    async with self._session.get(url, headers=self._headers) as response:
+                        if response.status != 200:
+                            return False
                         details = await response.json()
-                        latest = max((s["seasonNumber"] for s in details.get("seasons", [])), default=1)
-                        seasons = [latest]
-                    else:
-                        seasons = [1]
+                        numbers = [s.get("seasonNumber") for s in details.get("seasons", []) if type(s.get("seasonNumber")) is int and s["seasonNumber"] > 0]
+                        if not numbers:
+                            return False
+                        seasons = [max(numbers)]
+            except (aiohttp.ClientError, TimeoutError, ValueError):
+                return False
         else:  # first
             seasons = [1]
         

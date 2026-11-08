@@ -14,8 +14,9 @@ from homeassistant.exceptions import HomeAssistantError
 
 
 class Response:
-    def __init__(self, status=201):
+    def __init__(self, status=201, data=None):
         self.status = status
+        self.data = data
 
     async def __aenter__(self):
         return self
@@ -26,11 +27,20 @@ class Response:
     async def text(self):
         return "Test rejection"
 
+    async def json(self):
+        return self.data
+
 
 class Session:
-    def __init__(self, status=201):
+    def __init__(self, status=201, get_status=200, data=None):
         self.calls = []
         self.status = status
+        self.get_status=get_status
+        self.data=data
+
+    def get(self,url,**kwargs):
+        self.calls.append((url,kwargs))
+        return Response(self.get_status,self.data)
 
     def post(self, url, **kwargs):
         self.calls.append((url, kwargs))
@@ -38,6 +48,26 @@ class Session:
 
 
 class RequestTests(unittest.IsolatedAsyncioTestCase):
+    async def test_title_search_passes_raw_unicode_query_and_never_uses_wrong_type(self):
+        handler=self.handler()
+        handler._session=Session(data={"results":[{"id":7,"mediaType":"movie"}]})
+        query="Léon & die Nacht"
+        result=await SeerRequestHandler.async_search_media(handler,query,"movie")
+        self.assertEqual(result["id"],7)
+        self.assertEqual(handler._session.calls[0][1]["params"],{"query":query})
+        self.assertIsNone(await SeerRequestHandler.async_search_media(handler,query,"tv"))
+
+    async def test_latest_season_uses_real_positive_season_and_rejects_lookup_failure(self):
+        handler=self.handler()
+        handler._session=Session(data={"seasons":[{"seasonNumber":0},{"seasonNumber":1},{"seasonNumber":4}]})
+        call=SimpleNamespace(data={"name":"Series","tmdb_id":77,"season":"latest"})
+        self.assertTrue(await handler.async_request_tv(call))
+        self.assertEqual(handler._session.calls[-1][1]["json"]["seasons"],[4])
+        for status,data in [(503,None),(200,{"seasons":[]})]:
+            handler._session=Session(get_status=status,data=data)
+            self.assertFalse(await handler.async_request_tv(call))
+            self.assertEqual(len(handler._session.calls),1,"failed season lookup must never silently request season one")
+
     def handler(self):
         handler = object.__new__(SeerRequestHandler)
         handler._url = "https://seer.invalid"

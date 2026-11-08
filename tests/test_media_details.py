@@ -21,6 +21,12 @@ class Session:
 DETAIL={'id':7,'name':'Dark','first_air_date':'2017-12-01','overview':'Full plot','genres':[{'name':'Mystery'}],'credits':{'cast':[{'name':'Actor','character':'Pilot','profile_path':'/actor.jpg'}],'crew':[{'name':'Director','job':'Director'}]},'external_ids':{'tvdb_id':12},'vote_average':8.2}
 
 class MetadataTests(unittest.IsolatedAsyncioTestCase):
+    def test_trailers_require_official_youtube_ids_and_prefer_user_language(self):
+        video=lambda **extra: {"site":"YouTube","type":"Trailer","official":True,"key":"abcdef12345","iso_639_1":"en",**extra}
+        data={"videos":{"results":[video(),video(iso_639_1="de",key="german12345"),video(key="../../bad"),video(official=False)]}}
+        self.assertEqual(m.public_trailer(data,"de-DE")["url"],"https://www.youtube.com/watch?v=german12345")
+        self.assertIsNone(m.public_trailer({"videos":{"results":[video(type="Clip"),video(site="untrusted"),video(key="bad"),video(official=False)]}},"de"))
+
     def test_streaming_region_and_subscription_rental_separation(self):
         data={'watch/providers':{'results':{'DE':{'flatrate':[{'provider_id':8,'provider_name':'Netflix'}],
             'rent':[{'provider_id':10,'provider_name':'Amazon Video'}],

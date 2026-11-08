@@ -7,6 +7,75 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.5 — Request fixes and connection checks
+
+- Pair with Card 0.6.0-dev.6 and restart Home Assistant after installation.
+- `mediarr/request_capabilities` reads Seerr auth and non-sensitive service APIs
+  to verify its default Radarr/Sonarr targets, profiles and root folders. It also
+  checks configured TMDB and optional Immaculaterr connectivity. Only availability
+  and safe reason codes are returned; no URLs, keys, profile names or root paths.
+- Checks use bounded timeouts and a shared 10-second cache. They never add test
+  media or change manager settings. Card checks repeat every 30 seconds; network
+  state may still change between checking and executing a command.
+- Fix double-encoded title searches and prevent movie/series cross-type fallback.
+  A failed latest-season lookup no longer silently requests season one.
+- Developer prerelease only; stable/main remain unchanged.
+
+### v0.8.0-dev.4 — Current playback and pause/resume
+
+- Pair with Card 0.6.0-dev.5; restart HA after installing this integration.
+- `mediarr/players` includes current state, title and pause/resume capabilities
+  for permitted Plex player entities. The card displays active devices separately.
+- `mediarr/playback_control` pauses/resumes a selected authorized, available player
+  in the appropriate state, using HA services with the requesting user's context.
+  Unsupported, offline and unauthorized targets are rejected. Service failures
+  never produce successful command acknowledgements.
+- Main/stable remain unchanged until user testing and explicit approval.
+
+### v0.8.0-dev.3 — Explain player availability
+
+- Pair with Card 0.6.0-dev.4. Player status distinguishes disabled, not loaded,
+  unknown and unavailable entities. Permission filtering remains enforced.
+- Refreshing the card's player list rereads current HA state; it does not wake
+  devices or reload integrations. Open Plex on the target and allow remote
+  control, then refresh. Enable disabled entities in HA settings when needed.
+- This release does not claim to fix server/network/client availability, and
+  retains exact server/item playback delegation. Main/stable remain unchanged.
+
+### v0.8.0-dev.2 — Episode progress, trailers and waiting-title artwork
+
+- Pair with Mediarr Card 0.6.0-dev.3; update this integration first and restart HA.
+- Read Plex episode state in paged section queries, not per-episode requests.
+  Summarize available unplayed regular episodes after the furthest watched or
+  partially played position. Ignore old gaps and specials; include later seasons.
+  Return compact episode ranges per show, using the configured Plex account.
+  Unavailable/incomplete episode queries are explicit and retain the library.
+- Metadata includes an official YouTube trailer, preferring the user's language
+  with English fallback. Only validated video IDs become external links.
+- Manager snapshots now include public CDN poster/fanart URLs. Manager credentials
+  and private image URLs never reach the browser; queries are stripped.
+- Developer prerelease only; main/stable remain unchanged pending approval.
+
+### v0.8.0-dev.1 — Cinema developer backend
+
+- Pair with Mediarr Card 0.6.0-dev.1; install via HACS beta versions and restart HA.
+- Adds `mediarr/cinema`: trending, upcoming movie/TV releases and TMDB's native
+  per-account recommendations. No locally trained or scored recommendation engine.
+- Adds `mediarr/tmdb_account`: status/start/finish/disconnect for the current HA
+  user. Add the optional **TMDB API Read Access Token** in the integration's TMDB
+  options, keeping the existing API key. Approve the browser link from the card,
+  then confirm in the card. Account credentials stay in private HA storage and
+  responses never include long-lived tokens. Connections are isolated by HA user.
+- Adds `mediarr/collections`: reads existing Plex collections and dynamic smart
+  collection membership on demand, without modifying Plex.
+- Plex catalog returns added dates, in-progress state and signed backdrop artwork.
+  Manager releases distinguish cinema, digital, disc and next-episode dates.
+- Adds `mediarr/players` / `mediarr/play`: only permitted HA Plex player entities
+  are listed/controlled. Playback delegates an exact server/item URI to HA's
+  official Plex integration with the requesting user's context. Open Plex on the
+  TV to make its player available; an Android TV entity alone is insufficient.
+- Main/stable versions remain unchanged pending explicit approval after testing.
+
 ### v0.7.0
 - Authenticated `mediarr/search` catalog search with bounded pagination and caching.
 - `mediarr/library` loads complete Plex movie/show sections, including watched
