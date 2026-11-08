@@ -1,10 +1,18 @@
-name: Release On Main
+name: Owner-approved release
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      release_kind:
+        description: Explicitly approved release type
+        type: choice
+        options: [prerelease, stable]
+        default: prerelease
+        required: true
+      version_confirmation:
+        description: Type the exact approved package/manifest version
+        type: string
+        required: true
 
 permissions:
   contents: write
@@ -25,6 +33,10 @@ jobs:
 
       - name: Read version from manifest
         id: version
+        env:
+          RELEASE_KIND: ${{ inputs.release_kind }}
+          VERSION_CONFIRMATION: ${{ inputs.version_confirmation }}
+          RELEASE_REF: ${{ github.ref }}
         run: |
           python3 <<'PY'
           import json
@@ -40,6 +52,20 @@ jobs:
           if not re.fullmatch(r"\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?", version):
               print(f"Invalid manifest version: {version!r}", file=sys.stderr)
               sys.exit(1)
+
+          kind = os.environ.get("RELEASE_KIND", "")
+          if os.environ.get("VERSION_CONFIRMATION") != version:
+              sys.exit("Exact owner-approved version confirmation is required.")
+          if kind == "prerelease":
+              if "-" not in version:
+                  sys.exit("Developer prereleases require a prerelease version suffix.")
+          elif kind == "stable":
+              if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+                  sys.exit("A developer version must never be published as stable.")
+              if os.environ.get("RELEASE_REF") != "refs/heads/main":
+                  sys.exit("Stable releases require the reviewed main branch.")
+          else:
+              sys.exit("Choose an explicitly approved release type.")
 
           tag = f"v{version}"
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
@@ -69,4 +95,5 @@ jobs:
           name: ${{ steps.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
-          make_latest: true
+          prerelease: ${{ inputs.release_kind != 'stable' }}
+          make_latest: ${{ inputs.release_kind == 'stable' && 'true' || 'false' }}
