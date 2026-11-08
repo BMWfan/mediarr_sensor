@@ -92,6 +92,37 @@ class LibraryTests(unittest.IsolatedAsyncioTestCase):
         ):
             self.assertEqual(await client.snapshot(), result)
 
+    async def test_show_progress_and_cover_art_reach_library_snapshot(self):
+        client = self.client()
+        client.get = AsyncMock(side_effect=[
+            {"MediaContainer":{"Directory":[{"key":"3","type":"show"}]}},
+            {"MediaContainer":{"Metadata":[{"ratingKey":"7","type":"show","title":"Series","leafCount":3,"viewedLeafCount":1}],"totalSize":1}},
+            {"MediaContainer":{"Metadata":[{"grandparentRatingKey":"7","parentIndex":4,"index":1,"viewCount":1},{"grandparentRatingKey":"7","parentIndex":4,"index":2}],"totalSize":2}},
+        ])
+        with patch.object(m,"configured_sources",return_value=[{"provider":"plex"}]):
+            snapshot=await client.snapshot()
+        self.assertEqual(snapshot["groups"]["plex"][0]["episode_progress"]["unwatched_count"],1)
+        self.assertTrue(snapshot["complete"])
+
+    async def test_episode_failure_keeps_show_with_explicit_unknown_status(self):
+        client=self.client()
+        client.get=AsyncMock(side_effect=[
+            {"MediaContainer":{"Directory":[{"key":"3","type":"show"}]}},
+            {"MediaContainer":{"Metadata":[{"ratingKey":"7","type":"show","title":"Series","leafCount":3}],"totalSize":1}},
+            m.MediaDetailsError("library_unavailable","Unavailable"),
+        ])
+        with patch.object(m,"configured_sources",return_value=[{"provider":"plex"}]):
+            result=await client.snapshot()
+        self.assertEqual(result["groups"]["plex"][0]["episode_progress"],{"available":False})
+        self.assertFalse(result["complete"])
+        self.assertEqual(result["errors"][0]["code"],"episode_progress_unavailable")
+
+    def test_manager_artwork_only_exposes_public_cdns_without_query_credentials(self):
+        raw={"images":[{"coverType":"poster","remoteUrl":"https://private.invalid/poster?apikey=secret"},{"coverType":"poster","remoteUrl":"https://image.tmdb.org/t/p/original/test.jpg?token=secret"}]}
+        self.assertEqual(m.manager_artwork(raw,"poster"),"https://image.tmdb.org/t/p/original/test.jpg")
+        self.assertEqual(m.manager_artwork({"images":[{"coverType":"poster","remoteUrl":"https://image.tmdb.org:bad/file"}]},"poster"),"")
+        self.assertEqual(m.manager_artwork(raw,"fanart"),"")
+
     async def test_partial_source_failure_is_explicit_and_preserves_other_sources(self):
         client = self.client()
         client.get = AsyncMock(

@@ -98,11 +98,13 @@
           "on_air": "On air",
           "airing_today": "Airing today",
           "popular_movies": "Popular movies",
-          "popular_tv": "Popular TV"
+          "popular_tv": "Popular TV",
+          "tmdb_read_access_token": "TMDB API Read Access Token (for account connection)"
         },
         "data_description": {
           "tmdb_api_key": "This key is reused by modules that enable TMDB enrichment.",
-          "max_items": "Maximum number of items returned per sensor update."
+          "max_items": "Maximum number of items returned per sensor update.",
+          "tmdb_read_access_token": "Optional Read Access Token from your TMDB API settings. Stored in HA; not your account password."
         }
       },
       "plex": {
@@ -310,11 +312,13 @@
           "on_air": "On air",
           "airing_today": "Airing today",
           "popular_movies": "Popular movies",
-          "popular_tv": "Popular TV"
+          "popular_tv": "Popular TV",
+          "tmdb_read_access_token": "TMDB API Read Access Token (for account connection)"
         },
         "data_description": {
           "tmdb_api_key": "This key is reused by modules that enable TMDB enrichment.",
-          "max_items": "Maximum number of items returned per sensor update."
+          "max_items": "Maximum number of items returned per sensor update.",
+          "tmdb_read_access_token": "Optional Read Access Token from your TMDB API settings. Stored in HA; not your account password."
         }
       },
       "plex": {

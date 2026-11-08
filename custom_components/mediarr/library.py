@@ -6,6 +6,7 @@ import asyncio
 from datetime import timedelta
 import re
 import time
+from urllib.parse import urlsplit, urlunsplit
 
 import aiohttp
 from aiohttp import web
@@ -16,6 +17,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .media_details import DOMAIN, MediaDetailsError, public_details, ws_schema
 from .server.plex import _resolve_connection_config
+from .series_progress import section_episode_progress, episode_progress
 
 
 def configured_sources(hass):
@@ -55,6 +57,23 @@ def configured_sources(hass):
     return sources
 
 
+def manager_artwork(raw, cover_type):
+    """Expose public CDN artwork, never authenticated manager URLs or queries."""
+    for image in raw.get("images") or []:
+        if not isinstance(image, dict) or image.get("coverType") != cover_type:
+            continue
+        try:
+            parts = urlsplit(str(image.get("remoteUrl") or ""))
+            port = parts.port
+        except ValueError:
+            continue
+        if parts.scheme == "https" and parts.hostname in {
+            "image.tmdb.org", "artworks.thetvdb.com", "www.thetvdb.com", "thetvdb.com", "assets.fanart.tv"
+        } and not parts.username and not parts.password and port in (None, 443):
+            return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    return ""
+
+
 def plex_item(raw):
     kind = "tv" if raw.get("type") == "show" else "movie"
     guids = [x.get("id", "") for x in raw.get("Guid", []) if isinstance(x, dict)] + [
@@ -92,6 +111,13 @@ def plex_item(raw):
         "watched": watched,
         "has_watched": bool(raw.get("viewCount") or raw.get("viewedLeafCount")),
         "last_watched": raw.get("lastViewedAt", 0),
+        "added": raw.get("addedAt", 0),
+        "in_progress": bool(raw.get("viewOffset", 0))
+        or (
+            kind == "tv" and 0 < raw.get("viewedLeafCount", 0) < raw.get("leafCount", 0)
+        ),
+        "_has_art": bool(raw.get("art")),
+        "_episode_count": raw.get("leafCount"),
         "key": str(raw.get("ratingKey", "")),
         "cast": [
             {"name": x.get("tag", ""), "character": x.get("role", "")}
@@ -200,6 +226,7 @@ class LibraryClient:
                             if not key.isdigit():
                                 continue
                             start = 0
+                            section_items = []
                             while True:
                                 container = (
                                     await self.get(
@@ -218,6 +245,7 @@ class LibraryClient:
                                     if item["key"].isdigit():
                                         item["_image_source"] = index
                                     groups["plex"].append(item)
+                                    section_items.append(item)
                                 start += len(records)
                                 total = int(
                                     container.get(
@@ -231,6 +259,25 @@ class LibraryClient:
                                         "library_incomplete",
                                         "Plex returned an incomplete library page.",
                                     )
+                            if section.get("type") == "show":
+                                try:
+                                    progress = await section_episode_progress(
+                                        self, source, key
+                                    )
+                                    for item in section_items:
+                                        item["episode_progress"] = progress.get(
+                                            item["key"],
+                                            episode_progress([])
+                                            if item.get("_episode_count") == 0
+                                            else {"available": False},
+                                        )
+                                except MediaDetailsError:
+                                    for item in section_items:
+                                        item["episode_progress"] = {"available": False}
+                                    errors.append({
+                                        "provider": "plex",
+                                        "code": "episode_progress_unavailable",
+                                    })
                     else:
                         provider = source["provider"]
                         kind = "movie" if provider == "radarr" else "tv"
@@ -279,8 +326,32 @@ class LibraryClient:
                                 "tvdb_id": raw.get("tvdbId"),
                                 "imdb_id": raw.get("imdbId"),
                                 "overview": raw.get("overview", ""),
+                                "poster": manager_artwork(raw, "poster"),
+                                "banner": manager_artwork(raw, "fanart"),
                                 "has_file": has_file,
                                 "monitored": raw.get("monitored", True),
+                                "release_date": (
+                                    (
+                                        raw.get("digitalRelease")
+                                        or raw.get("physicalRelease")
+                                        or raw.get("inCinemas")
+                                    )
+                                    if kind == "movie"
+                                    else raw.get("nextAiring")
+                                ),
+                                "release_kind": (
+                                    (
+                                        "digital"
+                                        if raw.get("digitalRelease")
+                                        else (
+                                            "physical"
+                                            if raw.get("physicalRelease")
+                                            else "cinema"
+                                        )
+                                    )
+                                    if kind == "movie"
+                                    else "episode"
+                                ),
                                 **downloads.get(raw.get("id"), {}),
                             }
                             # Unmonitored existing titles still belong to the managed catalog.
@@ -296,8 +367,11 @@ class LibraryImageView(HomeAssistantView):
     url = "/api/mediarr/library_image/{source_id}/{rating_key}"
     name = "api:mediarr:library_image"
     requires_auth = True
+    extra_urls = ["/api/mediarr/library_image/{source_id}/{rating_key}/{image_type}"]
 
-    async def get(self, request, source_id, rating_key):
+    async def get(self, request, source_id, rating_key, image_type="thumb"):
+        if image_type not in {"thumb", "art"}:
+            raise web.HTTPNotFound()
         if not source_id.isdigit() or not rating_key.isdigit():
             raise web.HTTPNotFound()
         hass = request.app[KEY_HASS]
@@ -309,7 +383,7 @@ class LibraryImageView(HomeAssistantView):
             raise web.HTTPNotFound()
         try:
             async with async_get_clientsession(hass).get(
-                source["url"] + f"/library/metadata/{rating_key}/thumb",
+                source["url"] + f"/library/metadata/{rating_key}/{image_type}",
                 headers={"X-Plex-Token": source["token"]},
                 allow_redirects=False,
                 ssl=None if source.get("verify_ssl", True) else False,
@@ -378,6 +452,18 @@ async def websocket_library(hass, connection, msg):
                     )
                     client.image_urls[cache_key] = cached
                 public["poster"] = cached[1]
+                public["library_key"] = f"{item['_image_source']}:{item['key']}"
+                if item.get("_has_art"):
+                    art_path = path + "/art"
+                    art_key = (connection.user.id, art_path)
+                    art = client.image_urls.get(art_key)
+                    if not art or time.monotonic() - art[0] > 3600:
+                        art = (
+                            time.monotonic(),
+                            async_sign_path(hass, art_path, timedelta(hours=2)),
+                        )
+                        client.image_urls[art_key] = art
+                    public["banner"] = art[1]
                 public["key"] = f"/library/metadata/{item['key']}"
             groups[provider].append(public)
         connection.send_result(
@@ -400,3 +486,6 @@ def async_setup_library(hass):
     hass.data[DOMAIN]["library_client"] = LibraryClient(hass)
     websocket_api.async_register_command(hass, websocket_library)
     hass.http.register_view(LibraryImageView)
+    from .collections import websocket_collections
+
+    websocket_api.async_register_command(hass, websocket_collections)

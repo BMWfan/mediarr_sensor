@@ -102,11 +102,13 @@
           "on_air": "On Air",
           "airing_today": "Airing Today",
           "popular_movies": "Beliebte Filme",
-          "popular_tv": "Beliebte Serien"
+          "popular_tv": "Beliebte Serien",
+          "tmdb_read_access_token": "TMDB API Read Access Token (für Kontoverbindung)"
         },
         "data_description": {
           "tmdb_api_key": "Dieser Key wird in Modulen mit aktivierter TMDB-Anreicherung wiederverwendet.",
-          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update."
+          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update.",
+          "tmdb_read_access_token": "Optional: Read Access Token aus deinen TMDB-API-Einstellungen. Bleibt im HA-Backend; kein persönliches Passwort."
         }
       },
       "plex": {
@@ -318,11 +320,13 @@
           "on_air": "On Air",
           "airing_today": "Airing Today",
           "popular_movies": "Beliebte Filme",
-          "popular_tv": "Beliebte Serien"
+          "popular_tv": "Beliebte Serien",
+          "tmdb_read_access_token": "TMDB API Read Access Token (für Kontoverbindung)"
         },
         "data_description": {
           "tmdb_api_key": "Dieser Key wird in Modulen mit aktivierter TMDB-Anreicherung wiederverwendet.",
-          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update."
+          "max_items": "Maximale Anzahl an Einträgen pro Sensor-Update.",
+          "tmdb_read_access_token": "Optional: Read Access Token aus deinen TMDB-API-Einstellungen. Bleibt im HA-Backend; kein persönliches Passwort."
         }
       },
       "plex": {

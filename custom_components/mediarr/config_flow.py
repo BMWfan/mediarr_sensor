@@ -934,6 +934,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         self._data[SECTION_TMDB] = {
             TMDB_KEY_FIELD: tmdb_api_key,
+            "tmdb_read_access_token": _normalize_optional_text(user_input.get("tmdb_read_access_token")),
             "max_items": user_input["max_items"],
             "trending": user_input["trending"],
             "now_playing": user_input["now_playing"],
@@ -1474,6 +1475,7 @@ class MediarrConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return vol.Schema(
             {
                 vol.Required(TMDB_KEY_FIELD, default=default_tmdb_api_key or ""): str,
+                vol.Optional("tmdb_read_access_token", default=""): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
                 vol.Required("max_items", default=DEFAULT_MAX_ITEMS): _int_field(),
                 vol.Optional("trending", default=True): bool,
                 vol.Optional("now_playing", default=True): bool,
@@ -1774,6 +1776,7 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
 
         self._data[SECTION_TMDB] = {
             TMDB_KEY_FIELD: tmdb_api_key,
+            "tmdb_read_access_token": _normalize_optional_text(user_input.get("tmdb_read_access_token")),
             "max_items": user_input["max_items"],
             "trending": user_input["trending"],
             "now_playing": user_input["now_playing"],
@@ -2413,6 +2416,7 @@ class MediarrOptionsFlow(config_entries.OptionsFlow):
                     TMDB_KEY_FIELD,
                     default=defaults.get(TMDB_KEY_FIELD) or default_tmdb_api_key or "",
                 ): str,
+                vol.Optional("tmdb_read_access_token", default=defaults.get("tmdb_read_access_token") or ""): selector.TextSelector(selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)),
                 vol.Required(
                     "max_items", default=defaults.get("max_items", DEFAULT_MAX_ITEMS)
                 ): _int_field(),
