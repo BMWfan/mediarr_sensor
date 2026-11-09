@@ -1,0 +1,36 @@
+version: 1
+project: mediarr_sensor
+mode: report
+create_issues: false
+delegate: false
+sources:
+- id: ha-core
+  kind: release
+  repository: home-assistant/core
+  relevance: HA compatibility, services and authenticated WebSocket behavior
+- id: ha-developer-news
+  kind: feed
+  url: https://contributors.home-assistant.io/blog/rss.xml
+  relevance: Official API deprecations, frontend or integration changes
+- id: actions-checkout
+  kind: release
+  repository: actions/checkout
+  relevance: Review compatibility and security of pinned CI actions
+- id: python
+  kind: feed
+  url: https://www.python.org/downloads/feed.rss
+  relevance: Python releases supported by HA and the integration toolchain
+- id: plexapi
+  kind: release
+  repository: pkkid/python-plexapi
+  relevance: Plex library, watched state and playback API changes
+- id: aiohttp-advisories
+  kind: advisory
+  ecosystem: pip
+  package: aiohttp
+  relevance: Review HA-resolved aiohttp versions and provider HTTP transport
+- id: plexapi-advisories
+  kind: advisory
+  ecosystem: pip
+  package: plexapi
+  relevance: Review Plex dependency exposure; empty result is not a complete audit
