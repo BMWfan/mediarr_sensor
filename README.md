@@ -7,6 +7,11 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.7 — Quality and compatibility
+
+- Include reviewed read-only security CI, paired v1 contract fixtures and producer tests.
+- Runtime/API behavior is unchanged from dev.6.
+
 ### v0.8.0-dev.6 — Owner-controlled publication
 
 - Publication no longer runs on main pushes. Manual dispatch requires an
