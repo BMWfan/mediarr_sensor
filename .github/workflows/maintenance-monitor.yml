@@ -22,7 +22,7 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Shared report-only monitor (reviewed immutable source)
-        uses: BMWfan/Home-Assistant-Mail-And-Packages/.github/actions/maintenance-monitor@4be436ca075a60daa0e7073ff6852363b067c816
+        uses: BMWfan/Home-Assistant-Mail-And-Packages/.github/actions/maintenance-monitor@0b8bc1aa6a2d1254ba39b7c0efd1f521656f3be8
         with:
           config: .github/maintenance-monitor.yml
           token: ${{ github.token }}

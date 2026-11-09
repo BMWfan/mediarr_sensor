@@ -1,6 +1,6 @@
 # Read-only maintenance monitoring
 
-Tracks issue #23. This non-fork project uses the shared phase-1 action from BMWfan/Home-Assistant-Mail-And-Packages at immutable commit `4be436ca075a60daa0e7073ff6852363b067c816`. There is no copied monitor engine and no assumed upstream. Sources and project-specific relevance are explicit in `.github/maintenance-monitor.yml`.
+Tracks issue #23. This non-fork project uses the shared phase-1 action from BMWfan/Home-Assistant-Mail-And-Packages at immutable commit `0b8bc1aa6a2d1254ba39b7c0efd1f521656f3be8`. There is no copied monitor engine and no assumed upstream. Sources and project-specific relevance are explicit in `.github/maintenance-monitor.yml`.
 
 Run **Maintenance monitor (read-only)** from Actions using workflow_dispatch. The development branch runs on push for validation; weekly scheduling starts only after owner-approved merge to the default branch. Permissions are contents:read and actions:read; no extra secrets or production access.
 
