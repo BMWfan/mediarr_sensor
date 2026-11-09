@@ -1,0 +1,59 @@
+{
+  "contract_version": 1,
+  "minimum_versions": {
+    "card": "0.6.0-dev.7",
+    "sensor": "0.8.0-dev.6"
+  },
+  "details": {
+    "media_type": "tv",
+    "tmdb_id": 77,
+    "title": "Synthetic Series",
+    "overview": "Synthetic overview",
+    "cast": [
+      {
+        "name": "Test Actor",
+        "character": "Test Role"
+      }
+    ]
+  },
+  "search": {
+    "page": 1,
+    "total_pages": 1,
+    "results": [
+      {
+        "media_type": "tv",
+        "tmdb_id": 77,
+        "title": "Synthetic Series"
+      }
+    ]
+  },
+  "missing_capabilities": {
+    "movie": {
+      "available": false,
+      "reason": "seer_not_configured"
+    },
+    "tv": {
+      "available": false,
+      "reason": "seer_not_configured"
+    },
+    "immaculaterr": {
+      "available": false,
+      "reason": "immaculaterr_not_configured"
+    },
+    "tmdb": {
+      "available": false,
+      "reason": "tmdb_not_configured"
+    },
+    "tmdb_account": {
+      "available": false,
+      "reason": "tmdb_not_configured"
+    }
+  },
+  "errors": [
+    "unknown_command",
+    "unauthorized",
+    "metadata_unavailable",
+    "tmdb_not_configured",
+    "playback_unavailable"
+  ]
+}
