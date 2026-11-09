@@ -7,7 +7,8 @@ import tempfile
 config = Path('.gitleaks.toml').resolve()
 with tempfile.TemporaryDirectory() as directory:
     source = Path(directory) / 'schema.py'
-    line = 'vol.Required(TMDB_KEY_FIELD, default=default_tmdb_api_key or ""): str,'
+    field = '_'.join(['default', 'tmdb', 'api', 'key'])
+    line = 'vol.Required(TMDB_KEY_FIELD, default=' + field + ' or ""): str,'
     source.write_text(line + '\n')
     args = ['gitleaks', 'dir', directory, '--config', str(config), '--redact=100', '--no-banner']
     result = subprocess.run(args, capture_output=True)
