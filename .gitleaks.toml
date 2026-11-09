@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+# Exact schema expression with an empty-string fallback, not a credential.
+# Any inserted literal value changes the whole line and remains scanned.
+[allowlist]
+description = "TMDB config schema variable reference with empty fallback"
+regexTarget = "line"
+regexes = ['''^\s*vol\.Required\(TMDB_KEY_FIELD, default=default_tmdb_api_key or ""\): str,\s*$''']
