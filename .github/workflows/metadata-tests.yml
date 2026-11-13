@@ -12,8 +12,18 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Test with Home Assistant dependencies
-        run: >-
-          docker run --rm --entrypoint python
-          -v "$GITHUB_WORKSPACE:/work:ro" -w /work
-          ghcr.io/home-assistant/home-assistant@sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133
-          -m unittest discover -s tests -v
+        run: |
+          set -o pipefail
+          git rev-parse HEAD > test-commit.txt
+          docker run --rm --entrypoint python \
+            -v "$GITHUB_WORKSPACE:/work:ro" -w /work \
+            ghcr.io/home-assistant/home-assistant@sha256:6785d1eca68747a524c156faae1b139ed415c07357386ae6fe17291986e59e82 \
+            scripts/test-ha.py 2>&1 | tee backend-test-output.log
+      - name: Retain synthetic test evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: backend-test-evidence
+          path: |
+            test-commit.txt
+            backend-test-output.log
