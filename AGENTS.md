@@ -21,8 +21,8 @@ under this SDD-Light setup. The current test command is:
 ```sh
 docker run --rm --entrypoint python \
   -v "$PWD:/work:ro" -w /work \
-  ghcr.io/home-assistant/home-assistant@sha256:23f4dfbb69ce76315dbc4de7915504f1c2dcecd7ca2648113a493a385972e133 \
-  -m unittest discover -s tests -v
+  ghcr.io/home-assistant/home-assistant@sha256:6785d1eca68747a524c156faae1b139ed415c07357386ae6fe17291986e59e82 \
+  scripts/test-ha.py
 ```
 
 Tests and examples must use synthetic fixtures and mock transports, never real

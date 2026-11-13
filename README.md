@@ -7,6 +7,13 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.8 — Verified Home Assistant 2026.11.1 target
+
+- Pin test image to actual Core 2026.11.1 and assert its runtime version before backend tests.
+- Verify real authenticated WebSocket commands and initial config-flow serialization locally.
+- Add the official TV & Streaming catalog category; keep existing service/sensor contracts.
+- Record a project-specific adopt/defer/reject review of new HA APIs and frontend features in `docs/ha-2026-11-impact-review.md`.
+
 ### v0.8.0-dev.6 — Owner-controlled publication
 
 - Publication no longer runs on main pushes. Manual dispatch requires an
