@@ -1,10 +1,31 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
+import asyncio
 import unittest
 from custom_components.mediarr import playback as m
 
 
 class PlaybackTests(unittest.IsolatedAsyncioTestCase):
+    async def test_cached_library_scope_never_bypasses_current_configuration(self):
+        from custom_components.mediarr.snapshot_cache import source_scope
+        sources = [{"provider": "plex", "token": "synthetic"}]
+        for scope, config, allowed in [("old-profile", source_scope(sources), False), ("current", "old-config", False), ("current", source_scope(sources), True)]:
+            tasks = []
+            cache = SimpleNamespace(public_scope="current", scope=config)
+            hass = SimpleNamespace(data={"mediarr": {"library_client": SimpleNamespace(_snapshot_cache=cache)}},
+                async_create_background_task=lambda coro, *args, **kwargs: tasks.append(asyncio.create_task(coro)))
+            connection = SimpleNamespace(user=SimpleNamespace(id="fixture"), send_result=Mock(), send_error=Mock(),
+                async_create_task=lambda coro: tasks.append(asyncio.create_task(coro)))
+            with patch.object(m, "play", new=AsyncMock(return_value={"accepted": True})) as play, patch("custom_components.mediarr.library.configured_sources", return_value=sources):
+                m.websocket_play(hass, connection, {"id": 1, "type": "mediarr/play", "entity_id": "media_player.fixture", "library_key": "0:77", "library_scope": scope})
+                await asyncio.gather(*tasks)
+                if allowed:
+                    play.assert_awaited_once()
+                    connection.send_error.assert_not_called()
+                else:
+                    play.assert_not_awaited()
+                    self.assertEqual(connection.send_error.call_args.args[1], "library_config_changed")
+
     def test_offline_and_disabled_players_are_distinguished(self):
         entries = [
             SimpleNamespace(

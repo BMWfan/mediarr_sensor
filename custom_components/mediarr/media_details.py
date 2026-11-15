@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 from collections import OrderedDict
 from datetime import timedelta
 import re
@@ -18,6 +20,7 @@ if type(BASE_COMMAND_MESSAGE_SCHEMA).__module__.startswith("voluptuous"):
 else:
     import probatio as ws_schema
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 
 DOMAIN = "mediarr"
 COMMAND = "mediarr/media_details"
@@ -125,13 +128,120 @@ def public_trailer(data, language):
 class MediaDetailsClient:
     """Fetch selected-title details with bounded caching and safe errors."""
 
-    def __init__(self, session, key_resolver) -> None:
+    def __init__(self, session, key_resolver, hass=None) -> None:
         self.session = session
         self.key_resolver = key_resolver
         self.cache: OrderedDict = OrderedDict()
         self.slots = asyncio.Semaphore(4)
+        self.hass = hass
+        self.identities = OrderedDict()
+        self.identity_store = Store(hass, 1, "mediarr.identities", private=True) if hass else None
+        self.identity_loaded = False
+        self.identity_lock = asyncio.Lock()
+        self.external_identities = OrderedDict()
+        self.get_flights = {}
+
+    async def ensure_identities(self):
+        if self.identity_loaded:
+            return
+        async with self.identity_lock:
+            if self.identity_loaded:
+                return
+            if self.identity_store:
+                try:
+                    saved = await self.identity_store.async_load()
+                    for kind, title, year, identifier in (saved or {}).get("records", [])[-5000:]:
+                        if kind in {"movie", "tv"} and isinstance(title, str) and len(title) <= 256 and type(year) is int and 1800 <= year <= 2200 and (identifier is None or type(identifier) is int and 0 < identifier < 10**10):
+                            self.identities[(kind, title, year)] = identifier
+                    for kind, namespace, identifier, tmdb_id in (saved or {}).get("external", [])[-5000:]:
+                        if kind in {"movie", "tv"} and namespace in {"imdb", "tvdb"} and isinstance(identifier, str) and len(identifier)<64 and (tmdb_id is None or type(tmdb_id) is int and 0<tmdb_id<10**10):
+                            self.external_identities[(kind, namespace, identifier)] = tmdb_id
+                except Exception:
+                    self.identities.clear()
+                    self.external_identities.clear()
+            self.identity_loaded = True
+
+    def identity_for(self, kind, title, year, tvdb_id=None, imdb_id=None):
+        evidence = set()
+        for namespace, identifier in (("tvdb", tvdb_id), ("imdb", imdb_id)):
+            if identifier:
+                key = (kind, namespace, str(identifier))
+                if key in self.external_identities:
+                    value = self.external_identities[key]
+                    if value is None:
+                        return None
+                    evidence.add(value)
+        if tvdb_id or imdb_id:
+            return next(iter(evidence)) if len(evidence) == 1 else None
+        try:
+            year = int(year)
+        except (ValueError, TypeError):
+            return None
+        return self.identities.get((kind, normalize_title(str(title or "")), year))
+
+    def remember_identity(self, data):
+        try:
+            year = int(data.get("year"))
+        except (ValueError, TypeError):
+            return
+        if data.get("media_type") not in {"movie", "tv"} or not 1800 <= year <= 2200:
+            return
+        changed = False
+        for title in (data.get("title"), data.get("original_title")):
+            if not isinstance(title, str) or not title.strip():
+                continue
+            if not normalize_title(title) or len(normalize_title(title))>256:
+                continue
+            key = (data["media_type"], normalize_title(title), year)
+            identifier = data["tmdb_id"]
+            if key in self.identities and self.identities[key] != identifier:
+                identifier = None  # Conflicting evidence is never resolved by choosing a title.
+            if key not in self.identities or self.identities[key] != identifier:
+                self.identities[key] = identifier
+                changed = True
+            self.identities.move_to_end(key)
+        for namespace in ("imdb", "tvdb"):
+            identifier = data.get(namespace + "_id")
+            if not identifier:
+                continue
+            key = (data["media_type"], namespace, str(identifier))
+            value = data["tmdb_id"]
+            if key in self.external_identities and self.external_identities[key] != value:
+                value = None
+            if key not in self.external_identities or self.external_identities[key] != value:
+                self.external_identities[key] = value
+                changed = True
+            self.external_identities.move_to_end(key)
+        while len(self.identities) > 5000:
+            self.identities.popitem(last=False)
+        while len(self.external_identities) > 5000:
+            self.external_identities.popitem(last=False)
+        if changed and self.identity_store:
+            payload = {"records": [[*key, value] for key, value in self.identities.items()], "external": [[*key, value] for key, value in self.external_identities.items()]}
+            try:
+                self.identity_store.async_delay_save(lambda: payload, 2)
+            except Exception:
+                pass  # Optional persistence must not break authenticated metadata reads.
+        if changed and self.hass:
+            library = self.hass.data.get(DOMAIN, {}).get("library_client")
+            if library:
+                library.reconcile_identities()
 
     async def _get(self, endpoint: str, key: str, language: str, **params) -> dict:
+        identity = (endpoint, hashlib.sha256(key.encode()).hexdigest(), language, json.dumps(params, sort_keys=True))
+        task = self.get_flights.get(identity)
+        if task is None:
+            task = asyncio.create_task(self._get_uncached(endpoint, key, language, **params))
+            self.get_flights[identity] = task
+            def finished(done):
+                if self.get_flights.get(identity) is done:
+                    self.get_flights.pop(identity, None)
+                if not done.cancelled():
+                    done.exception()
+            task.add_done_callback(finished)
+        return await asyncio.shield(task)
+
+    async def _get_uncached(self, endpoint: str, key: str, language: str, **params) -> dict:
         params["language"] = language
         headers = {"Accept": "application/json"}
         if re.fullmatch(r"[0-9a-fA-F]{32}", key):
@@ -200,10 +310,16 @@ class MediaDetailsClient:
         key = self.key_resolver()
         if not key:
             raise MediaDetailsError("tmdb_not_configured", "Configure a TMDB credential in the Mediarr integration.")
+        await self.ensure_identities()
+        if not tmdb_id and media_type in {"movie", "tv"}:
+            tmdb_id = self.identity_for(media_type, title, year)
         cache_key = (media_type, tmdb_id, title.strip(), year, language, region)
-        cached = self.cache.get(cache_key)
-        if cached and time.monotonic() - cached[0] < CACHE_TTL:
+        cached = self.cache.get(cache_key) or (self.cache.get(("canonical", media_type, tmdb_id, language, region)) if tmdb_id else None)
+        if cached and time.monotonic() - cached[0] < (CACHE_TTL if cached[1].get("poster") and cached[1].get("backdrop") else 300):
+            self.cache[cache_key] = cached
             self.cache.move_to_end(cache_key)
+            while len(self.cache)>CACHE_LIMIT:
+                self.cache.popitem(last=False)
             return cached[1]
         if media_type == "unknown" or not tmdb_id:
             endpoint = "search/multi" if media_type == "unknown" else f"search/{media_type}"
@@ -226,10 +342,12 @@ class MediaDetailsClient:
                 code = "metadata_ambiguous" if matches else "metadata_not_found"
                 raise MediaDetailsError(code, "This title could not be identified unambiguously.")
             media_type, tmdb_id = next(iter(matches))
+        await self.ensure_identities()
         data = await self._get(f"{media_type}/{tmdb_id}", key, language, append_to_response="credits,external_ids,watch/providers,videos", include_video_language=f"{language.split('-')[0]},en,null")
         result = public_details(data, media_type)
         if result["tmdb_id"] != tmdb_id:
             raise MediaDetailsError("metadata_unavailable", "TMDB returned a different title.")
+        self.remember_identity(result)
         result["streaming"]=public_streaming(data,region)
         result["trailer"]=public_trailer(data,language)
         result["collection"] = None
@@ -244,6 +362,8 @@ class MediaDetailsClient:
                 else:
                     collection_data = await self._get(f"collection/{collection_id}", key, language)
                 result["collection"] = public_collection(collection_data, collection_id, tmdb_id)
+                for part in result["collection"]["parts"]:
+                    self.remember_identity(part)
                 self.cache[collection_key] = (time.monotonic(), collection_data)
                 self.cache.move_to_end(collection_key)
             except (MediaDetailsError, ValueError, TypeError, AttributeError):
@@ -251,6 +371,7 @@ class MediaDetailsClient:
         if result.get("collection_error"):
             return result  # Allow an explicit retry; main movie details remain usable.
         self.cache[cache_key] = (time.monotonic(), result)
+        self.cache[("canonical", media_type, tmdb_id, language, region)] = (time.monotonic(), result)
         self.cache.move_to_end(cache_key)
         while len(self.cache) > CACHE_LIMIT:
             self.cache.popitem(last=False)
@@ -305,7 +426,7 @@ def async_setup_metadata(hass) -> None:
     if domain_data.get("metadata_client"):
         return
     domain_data["metadata_client"] = MediaDetailsClient(
-        async_get_clientsession(hass), lambda: resolve_tmdb_key(hass.data.get(DOMAIN, {})))
+        async_get_clientsession(hass), lambda: resolve_tmdb_key(hass.data.get(DOMAIN, {})), hass=hass)
     websocket_api.async_register_command(hass, websocket_media_details)
     websocket_api.async_register_command(hass, websocket_media_search)
     from .library import async_setup_library

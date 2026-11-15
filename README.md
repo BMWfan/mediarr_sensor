@@ -7,6 +7,14 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.10 — Adaptive private library cache
+
+- Source-scoped HA storage restores normalized library snapshots (up to 24h) and verified public title identities, without credentials or signed image URLs.
+- Shared stale-while-revalidate reads use stable revisions, pinned pagination and backoff; failed providers retain last-good rows with explicit stale state.
+- Catalogs refresh separately from queues; queue membership/status changes invalidate manager catalog data. Live Plex identity and authorization checks remain uncached.
+- Thumb/backdrop revisions, private image ETags and bounded image RAM caching avoid repeated upstream artwork downloads.
+- Pair with Card v0.6.0-dev.11. No main/stable merge or production writes are part of this prerelease.
+
 ### v0.8.0-dev.9 — Movie collections
 
 - Extend authenticated movie details with canonical, sanitized TMDB collection parts in release order.
