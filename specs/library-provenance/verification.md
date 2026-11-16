@@ -1,7 +1,7 @@
 # Verification — library provenance
 
 ## Current status
-Implementation and relevant synthetic tests pass. Reviewed source commit: `a7b97f43fe402582896584a6c1d362978789168f`. Paired source commits: card `5e8230ce96a36967b33cf7f9283143772c580488`, sensor `a7b97f43fe402582896584a6c1d362978789168f`. No live incident resolution claimed; Draft PR creation is blocked by API network access.
+Implementation and relevant synthetic tests pass. Reviewed source commit: `a7b97f43fe402582896584a6c1d362978789168f`. Paired source commits: card `41de88e2ac7debd2f5ef13f5ec72f00456783c0d`, sensor `a7b97f43fe402582896584a6c1d362978789168f`. No live incident resolution claimed; Owner-created Draft PRs are verified: card #48 and sensor #33. API metadata access remains blocked; public run pages provide actual CI evidence below.
 
 ## Provenance and measurements
 Issue: https://github.com/BMWfan/mediarr-card/issues/44 including SPEC-046 pilot handoff. Task/thread: 6afa79ad-6e6c-8191-9a49-2bd60c9cc069. Environment: ccarenv_b64_Y2NhcmVudl9kYmRjOWNmN2E5NmM4MTkxYjAwNGFmZjBhNTQzOGNhNA. Installed CLI previously observed 0.167.0-alpha.4; coordinator version not independently established. Start timestamp 2026-11-16 04:10:42 UTC (clock tool, after initial lookup). Card baseline d94fbb62d3d359fac73790285188385f5b66436b; sensor baseline ab78fe791a05d2d8ed3f03d130249c587446272d. Use branches, not main writes.
@@ -78,3 +78,31 @@ Branch comparison pages (these are not existing PRs):
 - https://github.com/BMWfan/mediarr_sensor/compare/main...fix/44-seerr-status-contract
 
 No merge, release, production access, credential extraction or network policy change. The asynchronous question about allowing api.github.com or user-created drafts remains unanswered at this checkpoint; elapsed time is not permission.
+
+
+## Owner-requested paired PR review — 2026-11-16
+
+Actual PRs now exist and were checked through their public pages: [card #48](https://github.com/BMWfan/mediarr-card/pull/48), [sensor #33](https://github.com/BMWfan/mediarr_sensor/pull/33). Both explicitly show Draft after the owner converted #48; bases main and heads fix/44-seerr-request-status / fix/44-seerr-status-contract match. HTTPS Git pull refs matched c190c7d / 1624a9e before this review. Historical failed creation attempts above are retained; they no longer mean PRs are absent. Updated tasks and compact handoffs accordingly.
+
+`gh pr checks 48 --repo BMWfan/mediarr-card` and `gh pr checks 33 --repo BMWfan/mediarr_sensor` still return Forbidden. Alternative **supported public read**: fetched each repository's Actions page filtered to its exact branch, then each listed run page. Parsed visible Status/Success, duration and commit title and verified expected head SHA appears. Thus the following are real CI outcomes for these exact pre-review heads, not inferred from local tests or a stale unrelated workflow:
+
+| Repository / reviewed head | Workflow | Actual public result | Run |
+| --- | --- | --- | --- |
+| card c190c7d | Quality and security | Success, 37s | https://github.com/BMWfan/mediarr-card/actions/runs/43865786231 |
+| card c190c7d | Validate Mediarr Card | Success, 21s | https://github.com/BMWfan/mediarr-card/actions/runs/43865785899 |
+| card c190c7d | Home Assistant integration tests | Success, 2m21s | https://github.com/BMWfan/mediarr-card/actions/runs/43865785994 |
+| sensor 1624a9e | Quality and security | Success, 36s | https://github.com/BMWfan/mediarr_sensor/actions/runs/43865855912 |
+| sensor 1624a9e | Metadata backend tests | Success, 40s | https://github.com/BMWfan/mediarr_sensor/actions/runs/43865855904 |
+
+Reviewed full production diffs and closest regression/browser tests against the paired M specification. Confirmed one additional status-label robustness defect: `_getStatusInfo('constructor')`, `'toString'` and `'__proto__'` each throw TypeError reading undefined.toLowerCase because indexing the plain statusMap can return inherited Object properties. This is a malformed-input crash, not evidence of code execution or a live producer incident. The explicit request_status field makes a safe unknown fallback relevant to the paired contract.
+
+Regression before fix: added `malformed request status never resolves inherited object properties`; `node --test tests/seerr-provenance.test.mjs` exited 1: seven tests, six passed/one failed with the reproduced TypeError. Correction accepts only scalar number/string keys that are own properties of statusMap; all other values use the existing localized Unknown fallback. Added real-HA legacy detail assertion for request_status='constructor'. No producer source change required; its raw additive fields and existing statuses remain unchanged.
+
+After fix:
+- `node --test tests/*.test.mjs`: directly returned exit 0, 36 passed, zero failed/cancelled/skipped (513.463194ms in focused model run).
+- `CHROMIUM_PATH=/usr/bin/chromium bash dev/setup.sh`, `bash dev/start.sh`, `CHROMIUM_PATH=/usr/bin/chromium bash dev/test.sh`: combined command directly returned exit 0 and persisted 0 in `/tmp/review44-card-suite.exit`. Captured `/tmp/review44-card-suite.log`: 6 release tests OK, 36 model tests passed, 79 browser checks PASS (18/14/4/8/6/6/13/10 across legacy/library/metadata/catalog/full-library/provider/cinema/security), no failed/cancelled/skipped model tests.
+- `bash scripts/build-single-file.sh`, `node --check mediarr-card.js`, byte comparison to the tested development bundle and `git diff --check`: exit 0. Generated bundle intentionally includes the tiny status fallback correction, with no release/version bump.
+
+Reviewed corrective source commit: `41de88e2ac7debd2f5ef13f5ec72f00456783c0d`. Producer source remains a7b97f4; no backend suite rerun is claimed for documentation-only changes. Existing backend 61-test result and exact-head CI above remain evidence for that unchanged source.
+
+Disposition: no additional confirmed blocking code finding in the reviewed contract, ownership/recency logic or corrected status handling. Updated handoffs/paired links remove the stale PR-creation blocker. Current PR-head CI must be checked again after these commits are pushed; the pre-review Success results above are not claimed for a different commit. Actual input/output/cache tokens remain UNMEASURED; bounded manually counted review window through the final local-suite check: 7 functions.exec orchestrations, separately 13 exec_command calls and one process poll (before later documentation/push work). No total-token or A/B savings claim. No merge/release or production access. Known live #41 verification and old-card compatibility limitations remain unchanged.

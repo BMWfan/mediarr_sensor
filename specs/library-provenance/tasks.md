@@ -6,5 +6,5 @@
 - [x] Implement smallest source changes with red/green regression proof.
 - [x] Verify relevant model/backend and real-HA frontend checks; record actual results.
 - [x] AI review scope, enum semantics, failure handling and synthetic-data safety.
-- [ ] Publish reviewable Draft PR with paired contract/evidence references.
+- [x] Publish reviewable Draft PR with paired contract/evidence references (card #48 / sensor #33, owner-created and Draft verified).
 - [ ] Owner merge/release: not authorized.
