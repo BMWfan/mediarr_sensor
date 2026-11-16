@@ -99,7 +99,10 @@ class SeerMediarrSensor(TMDBMediaSensor):
                             request_data = {
                                 'title': title,
                                 'type': 'Movie' if is_movie else 'TV Show',
+                                # Legacy status remains the request enum, never media availability.
                                 'status': request.get('status', 'Unknown'),
+                                'request_status': request.get('status', 'Unknown'),
+                                'media_status': media.get('status'),
                                 'requested_by': request.get('requestedBy', {}).get('displayName', 'Unknown User'),
                                 'requested_date': formatted_date,
                                 'overview': overview,
