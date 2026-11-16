@@ -1,7 +1,7 @@
 # Verification — library provenance
 
 ## Current status
-Implementation and relevant synthetic tests pass. Reviewed source commit: `a7b97f43fe402582896584a6c1d362978789168f`. Paired source commits: card `706d4b7aa5724ebd1028cac5a9fdf15797211dc6`, sensor `a7b97f43fe402582896584a6c1d362978789168f`. No live incident resolution claimed; Draft PR creation is blocked by API network access.
+Implementation and relevant synthetic tests pass. Reviewed source commit: `a7b97f43fe402582896584a6c1d362978789168f`. Paired source commits: card `5e8230ce96a36967b33cf7f9283143772c580488`, sensor `a7b97f43fe402582896584a6c1d362978789168f`. No live incident resolution claimed; Draft PR creation is blocked by API network access.
 
 ## Provenance and measurements
 Issue: https://github.com/BMWfan/mediarr-card/issues/44 including SPEC-046 pilot handoff. Task/thread: 6afa79ad-6e6c-8191-9a49-2bd60c9cc069. Environment: ccarenv_b64_Y2NhcmVudl9kYmRjOWNmN2E5NmM4MTkxYjAwNGFmZjBhNTQzOGNhNA. Installed CLI previously observed 0.167.0-alpha.4; coordinator version not independently established. Start timestamp 2026-11-16 04:10:42 UTC (clock tool, after initial lookup). Card baseline d94fbb62d3d359fac73790285188385f5b66436b; sensor baseline ab78fe791a05d2d8ed3f03d130249c587446272d. Use branches, not main writes.
@@ -50,3 +50,31 @@ Runtime status confirms enforced restricted networking, no custom hosts, and `ap
 
 ## Gaps
 No production membership/playback verification. No merge/release. Draft PR creation depends on actual GitHub API capability; Git transport success alone is not proof of API permission.
+
+
+## Final recency review and Draft creation attempts
+
+After the initial successful suites, final issue-scope review found that compact Recently added previously included every ready entry, including manager/Seerr-only ownership with no library provenance. Added a real-HA regression before fixing it. First post-Resume attempt timed out waiting for the card after the long pause (stale local test authentication); reran `bash dev/start.sh` to refresh local-only tokens, without printing them. The retried regression then failed for the intended reason: **3 actual compact posters versus 0 expected**, not an API/setup error. Fixed recent-row selection to require Plex/Jellyfin source references independently of ready status, and added that provenance boolean to the refresh signature. No date is created or rewritten. The browser also verifies that a later matching Plex row refreshes an unchanged ready/ID/title entry.
+
+Final card source commit: `5e8230ce96a36967b33cf7f9283143772c580488`; initial request/media correction `706d4b7` remains in history. Producer code is unchanged at `a7b97f43fe402582896584a6c1d362978789168f`; later producer commits change only documentation.
+
+Actual final commands/results:
+- Rebuilt development runtime with `CHROMIUM_PATH=/usr/bin/chromium bash dev/setup.sh`: exit 0.
+- `CHROMIUM_PATH=/usr/bin/chromium node tests/e2e/provider-config.mjs`: exit 0; six checks PASS including recent-arrival provenance and later Plex refresh.
+- Repeated `CHROMIUM_PATH=/usr/bin/chromium bash dev/test.sh` because compact source logic changed: directly observed exit **0**, also persisted in `/tmp/issue44-final-card-suite.exit`; 6 release tests OK, 35 model tests passed (0 failed/cancelled/skipped) and **79 browser checks PASS** (18 legacy +14 library +4 metadata +8 catalog +6 full-library +6 provider configuration +13 cinema +10 security).
+- Post-commit bundle regeneration, syntax check, clean bundle diff and byte comparison with tested development bundle: exit 0. No application changes followed this final run.
+
+The extra recency fix, stale-auth timeout/refresh and repeated affected suite are actual rework after the earlier measurement checkpoint; they are not hidden from the pilot record. Total token usage remains UNMEASURED. Backend did not need a second run for documentation-only updates; its 61-test OK result above still covers unchanged producer code. No CI workflow changed and no release/version bump occurred.
+
+Both branches were pushed successfully. Actual commands attempted once each with the prepared descriptions:
+```sh
+gh pr create --repo BMWfan/mediarr-card --base main --head fix/44-seerr-request-status --draft --title 'fix(seerr): distinguish requests from available media (#44)' --body-file /tmp/issue44-card-pr.md
+gh pr create --repo BMWfan/mediarr_sensor --base main --head fix/44-seerr-status-contract --draft --title 'fix(seerr): expose distinct request and media status fields' --body-file /tmp/issue44-sensor-pr.md
+```
+Each returned **exit 1**, `Post "https://api.github.com/graphql": Forbidden`. No Draft PR ID/URL was returned; **no PR creation is claimed**. Current API/domain constraint remains the external blocker. Persistent, reviewable [pr-description.md](pr-description.md) contains the intended body; after API access is available, use that tracked file with the same `--draft` commands (never create duplicate drafts if another task/user has already created them).
+
+Branch comparison pages (these are not existing PRs):
+- https://github.com/BMWfan/mediarr-card/compare/main...fix/44-seerr-request-status
+- https://github.com/BMWfan/mediarr_sensor/compare/main...fix/44-seerr-status-contract
+
+No merge, release, production access, credential extraction or network policy change. The asynchronous question about allowing api.github.com or user-created drafts remains unanswered at this checkpoint; elapsed time is not permission.

@@ -25,6 +25,8 @@ There is no new released version minimum yet: the paired draft builds implement
 this additive contract. Old cards retain their existing status interpretation;
 new cards work with old sensor rows but cannot infer Seerr-only availability from
 request status. TV partial availability is not full-series completeness or a
-playback guarantee. Existing request dates are not library import timestamps.
+playback guarantee. Existing request dates are not library import timestamps. Manager/Seerr-only
+ownership is excluded from compact Recently added until Plex/Jellyfin library
+provenance exists; no new import date is fabricated.
 
 See [producer specification](../specs/library-provenance/spec.md).

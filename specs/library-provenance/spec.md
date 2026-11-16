@@ -9,6 +9,7 @@ Card Issue #44 and its SPEC-046 pilot handoff distinguish request state from med
 - Positive availability: Plex/Jellyfin record, existing strict boolean `has_file`/`hasFile`, or explicit Seerr media_status 5 (available). Media status 4 is partial: evidence for TV only, not movies or unknown type. A failed request never erases independent positive availability.
 - Absent/malformed media status fails closed. Raw nested `media.status` can be consumed for actual-shaped fixtures; flat explicit media_status takes precedence. Never reinterpret ambiguous legacy status as media status.
 - Legacy card labels use request_status preferentially, status as fallback: 4 Failed, 5 Completed. No change to request-service APIs.
+- Ownership and recency are separate: manager/Seerr-only availability must not enter compact Recently added without Plex/Jellyfin library provenance. Do not invent timestamps; a later matching library record must refresh the compact row even when ID/title/stage stay unchanged.
 - Synthetic tests cover all request codes, absent/new/legacy fields, partial movie/TV, true/false file evidence and merged sources; producer tests exercise async_update with mocked Seerr/TMDB transports.
 
 ## Compatibility and boundaries
