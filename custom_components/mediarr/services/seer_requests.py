@@ -2,6 +2,7 @@ import logging
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.exceptions import HomeAssistantError
 import aiohttp
 import async_timeout
@@ -68,7 +69,7 @@ class SeerRequestHandler:
         self.hass = hass
         self._url = url.rstrip('/')
         self._api_key = api_key
-        self._session = aiohttp.ClientSession()
+        self._session = async_get_clientsession(hass)
         self._headers = {'X-Api-Key': self._api_key}
 
     async def async_search_media(self, query: str, media_type: str = None) -> dict:
@@ -303,12 +304,6 @@ class SeerRequestHandler:
             _LOGGER.error("Error getting TV details: %s", err)
             return None
 
-    async def close(self):
-        """Close the session."""
-        if self._session:
-            await self._session.close()
-
-
 async def async_setup_services(hass: HomeAssistant, domain: str) -> bool:
     """Register custom services for Mediarr integration."""
     
@@ -363,10 +358,6 @@ async def async_setup_services(hass: HomeAssistant, domain: str) -> bool:
 
 async def async_unload_services(hass: HomeAssistant, domain: str) -> bool:
     """Unload Mediarr services."""
-    handler = hass.data.get(domain, {}).get("seer_request_handler")
-    if handler:
-        await handler.close()
-
     if hass.services.has_service(domain, SERVICE_MOVIE_REQUEST):
         hass.services.async_remove(domain, SERVICE_MOVIE_REQUEST)
     if hass.services.has_service(domain, SERVICE_TV_REQUEST):

@@ -88,9 +88,11 @@ class LibraryTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(
             m,
             "configured_sources",
-            side_effect=AssertionError("Cached result expected"),
+            return_value=sources,
         ):
+            count = client.get.await_count
             self.assertEqual(await client.snapshot(), result)
+            self.assertEqual(client.get.await_count, count)
 
     async def test_show_progress_and_cover_art_reach_library_snapshot(self):
         client = self.client()
@@ -116,6 +118,12 @@ class LibraryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["groups"]["plex"][0]["episode_progress"],{"available":False})
         self.assertFalse(result["complete"])
         self.assertEqual(result["errors"][0]["code"],"episode_progress_unavailable")
+        # Reusing the source catalog must retain its partial-failure signal.
+        calls = client.get.await_count
+        cached = await client._collect_snapshot([{"provider":"plex"}], result)
+        self.assertFalse(cached["complete"])
+        self.assertEqual(cached["errors"][0]["code"], "episode_progress_unavailable")
+        self.assertEqual(client.get.await_count, calls)
 
     def test_manager_artwork_only_exposes_public_cdns_without_query_credentials(self):
         raw={"images":[{"coverType":"poster","remoteUrl":"https://private.invalid/poster?apikey=secret"},{"coverType":"poster","remoteUrl":"https://image.tmdb.org/t/p/original/test.jpg?token=secret"}]}

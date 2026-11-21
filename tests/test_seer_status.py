@@ -1,7 +1,10 @@
 """Actual-shaped Seerr requests retain distinct request/media enums (offline)."""
+import json
+from pathlib import Path
 import unittest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock, patch
 from custom_components.mediarr.services.seer import SeerMediarrSensor
+from custom_components.mediarr.services import seer_requests
 
 
 class Response:
@@ -33,8 +36,21 @@ class Session:
 
 
 class SeerStatusTests(unittest.IsolatedAsyncioTestCase):
+    async def test_unloading_requests_preserves_shared_http_session(self):
+        hass = Mock()
+        session = Mock(close=AsyncMock())
+        with patch.object(seer_requests, 'async_get_clientsession', return_value=session) as shared:
+            handler = seer_requests.SeerRequestHandler(hass, 'https://seer.invalid', 'synthetic')
+        shared.assert_called_once_with(hass)
+        self.assertIs(handler._session, session)
+        hass.data = {'mediarr': {'seer_request_handler': handler}}
+        await seer_requests.async_unload_services(hass, 'mediarr')
+        session.close.assert_not_awaited()
+
     async def test_request_and_media_status_are_additive_and_independent(self):
-        for request_status, media_status, kind in [(4, 5, 'movie'), (2, 4, 'tv'), (5, 2, 'movie'), (1, None, 'tv')]:
+        contract = json.loads((Path(__file__).parent / 'contracts/v1.json').read_text())
+        for case in contract['seerr_cases']:
+            request_status, media_status, kind = case['request_status'], case['media_status'], case['kind']
             with self.subTest(request=request_status, media=media_status):
                 media = {'mediaType': kind, 'tmdbId': 91}
                 if media_status is not None:

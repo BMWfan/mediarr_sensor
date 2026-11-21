@@ -178,9 +178,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     seer_config = entry_config.get("seer")
     if seer_config:
-        old_handler = domain_data.get("seer_request_handler")
-        if old_handler:
-            await old_handler.close()
         domain_data["seer_request_handler"] = SeerRequestHandler(
             hass,
             seer_config["url"],

@@ -388,7 +388,7 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
         try:
             is_episode = item.get('Type') == 'Episode'
             item_id = item.get('Id')
-            date_added = item.get('DateCreated', '')  # Get the date added
+            date_added = item.get('DateCreated') or ''
             
             # Default empty images to None for cleaner handling
             poster_url = backdrop_url = main_backdrop_url = None
@@ -520,14 +520,13 @@ class JellyfinMediarrSensor(TMDBMediaSensor):
                             if show_title not in show_episodes:
                                 show_episodes[show_title] = {
                                     **processed,
-                                    'episodes': [processed['number']],
-                                    'added_at': processed.get('added', '')  # Use added date instead of release
+                                    'episodes': [processed['number']]
                                 }
                             else:
                                 show_episodes[show_title]['episodes'].append(processed['number'])
                                 # Update if this episode was added more recently
-                                if processed.get('added', '') > show_episodes[show_title]['added_at']:
-                                    show_episodes[show_title]['added_at'] = processed.get('added', '')
+                                if processed['added_at'] > show_episodes[show_title]['added_at']:
+                                    show_episodes[show_title]['added_at'] = processed['added_at']
                                     show_episodes[show_title]['episode'] = processed['episode']
                                     show_episodes[show_title]['number'] = processed['number']
                         else:
@@ -602,4 +601,3 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     """Set up the Jellyfin sensor."""
     sensors = await JellyfinMediarrSensor.create_sensors(hass, config)
     async_add_entities(sensors, True)
-    
