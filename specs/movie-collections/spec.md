@@ -1,0 +1,2 @@
+# Movie collections (M)
+Goal: canonical TMDB film-series rail below the existing single Handlung paragraph. Explicit part selection updates title, metadata, cast and individual play/request readiness in place. Availability comes from library/manager data, never TMDB. Exact typed movie IDs; no fuzzy-title grouping, collection-ID request, bulk request or auto-play. Keep whole-page HA scrolling and overlay scrolling; only the poster rail scrolls horizontally. Synthetic tests and paired HACS developer candidates precede owner-tested main approval.

@@ -7,6 +7,13 @@ Support This Project If you find this project helpful, please consider supportin
 
 ## Changelog
 
+### v0.8.0-dev.9 — Movie collections
+
+- Extend authenticated movie details with canonical, sanitized TMDB collection parts in release order.
+- Preserve movie details on optional collection failures; allow retry without title guessing or collection-ID requests.
+- Pair with Card v0.6.0-dev.10. No production media is requested by metadata lookup.
+
+
 ### v0.8.0-dev.8 — Verified Home Assistant 2026.11.1 target
 
 - Pin test image to actual Core 2026.11.1 and assert its runtime version before backend tests.

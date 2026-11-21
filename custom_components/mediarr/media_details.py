@@ -91,6 +91,27 @@ def public_streaming(data, region):
             "buy":providers("buy"),"link":link}
 
 
+def public_collection(data, collection_id, selected_id):
+    """Canonical membership only; never infer a collection from similar titles."""
+    if not isinstance(data, dict) or type(data.get("id")) is not int or data["id"] != collection_id:
+        raise MediaDetailsError("metadata_unavailable", "Film series metadata is unavailable.")
+    parts = {}
+    for raw in (data.get("parts") or [])[:100]:
+        if not isinstance(raw, dict) or raw.get("adult") or raw.get("media_type", "movie") != "movie":
+            continue
+        if type(raw.get("id")) is not int or not 0 < raw["id"] < 10**10:
+            continue
+        if not isinstance(raw.get("title"), str) or not raw["title"].strip():
+            continue
+        part = public_details(raw, "movie")
+        part["release_date"] = raw.get("release_date") if isinstance(raw.get("release_date"), str) else ""
+        parts.setdefault(raw["id"], part)
+    if selected_id not in parts:
+        raise MediaDetailsError("metadata_unavailable", "Film series membership could not be confirmed.")
+    ordered = sorted(parts.values(), key=lambda part: (part["release_date"] or "9999", part["tmdb_id"]))
+    return {"id": collection_id, "name": str(data.get("name") or ""), "parts": ordered}
+
+
 def public_trailer(data, language):
     videos = [video for video in data.get("videos", {}).get("results", [])
               if video.get("site") == "YouTube" and video.get("type") == "Trailer"
@@ -207,8 +228,28 @@ class MediaDetailsClient:
             media_type, tmdb_id = next(iter(matches))
         data = await self._get(f"{media_type}/{tmdb_id}", key, language, append_to_response="credits,external_ids,watch/providers,videos", include_video_language=f"{language.split('-')[0]},en,null")
         result = public_details(data, media_type)
+        if result["tmdb_id"] != tmdb_id:
+            raise MediaDetailsError("metadata_unavailable", "TMDB returned a different title.")
         result["streaming"]=public_streaming(data,region)
         result["trailer"]=public_trailer(data,language)
+        result["collection"] = None
+        membership = data.get("belongs_to_collection")
+        collection_id = membership.get("id") if isinstance(membership, dict) else None
+        if media_type == "movie" and type(collection_id) is int and 0 < collection_id < 10**10:
+            collection_key = ("collection", collection_id, language)
+            try:
+                cached_collection = self.cache.get(collection_key)
+                if cached_collection and time.monotonic() - cached_collection[0] < CACHE_TTL:
+                    collection_data = cached_collection[1]
+                else:
+                    collection_data = await self._get(f"collection/{collection_id}", key, language)
+                result["collection"] = public_collection(collection_data, collection_id, tmdb_id)
+                self.cache[collection_key] = (time.monotonic(), collection_data)
+                self.cache.move_to_end(collection_key)
+            except (MediaDetailsError, ValueError, TypeError, AttributeError):
+                result["collection_error"] = "collection_unavailable"
+        if result.get("collection_error"):
+            return result  # Allow an explicit retry; main movie details remain usable.
         self.cache[cache_key] = (time.monotonic(), result)
         self.cache.move_to_end(cache_key)
         while len(self.cache) > CACHE_LIMIT:
