@@ -139,6 +139,7 @@ def plex_item(raw):
 
 def queue_state(records):
     result = {}
+    transfer_progress = {}
     for item in records:
         identity = item.get("movieId") or item.get("seriesId")
         if not identity:
@@ -159,13 +160,18 @@ def queue_state(records):
             or "warning" in str(item.get("trackedDownloadStatus", "")).lower()
         ):
             status = "warning"
+        elif status in {"unpacking", "extracting"} or tracked in {"unpacking", "extracting"}:
+            status = "unpacking"
+        elif status == "downloading" and size > 0 and remaining == 0:
+            # Arr can report downstream processing as downloading with zero bytes left.
+            status = "processing"
         elif status not in {"paused", "queued", "downloading", "completed"}:
             status = "downloading"
-        old = result.get(identity)
-        if old is None or (progress or 0) > (old.get("download_progress") or 0):
+        if identity not in result or (progress or 0) > transfer_progress[identity]:
+            transfer_progress[identity] = progress or 0
             result[identity] = {
                 "download_status": status,
-                "download_progress": progress,
+                "download_progress": None if status in {"unpacking", "processing"} else progress,
             }
     return result
 

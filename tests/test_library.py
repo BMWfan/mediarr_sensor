@@ -168,6 +168,17 @@ class LibraryTests(unittest.IsolatedAsyncioTestCase):
             result[2], {"download_progress": 100, "download_status": "importing"}
         )
 
+    def test_queue_transitions_from_transfer_to_postprocessing(self):
+        item = {"movieId": 1, "size": 1000, "sizeleft": 1, "status": "downloading"}
+        self.assertEqual(m.queue_state([item])[1]["download_status"], "downloading")
+        item["sizeleft"] = 0
+        self.assertEqual(m.queue_state([item])[1], {"download_status": "processing", "download_progress": None})
+        item["trackedDownloadState"] = "unpacking"
+        self.assertEqual(m.queue_state([item])[1], {"download_status": "unpacking", "download_progress": None})
+        other = dict(item, sizeleft=500, trackedDownloadState="downloading")
+        for records in ([other, item], [item, other]):
+            self.assertEqual(m.queue_state(records)[1]["download_status"], "unpacking")
+
     def test_plex_ids_and_watched_state(self):
         result = m.plex_item(
             {
