@@ -117,3 +117,53 @@ class MetadataTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(Exception):schema({'id':2,'type':'mediarr/media_details','unexpected':'not accepted'})
 
 if __name__=='__main__':unittest.main()
+
+class MovieCollectionTests(unittest.IsolatedAsyncioTestCase):
+    def collection(self):
+        return {'id':900,'name':'Orbit Trilogy','parts':[
+            {'id':3,'title':'Orbit III','release_date':'1990-01-01'},
+            {'id':1,'title':'Orbit I','release_date':'1985-01-01'},
+            {'id':2,'title':'Orbit II','release_date':'1989-01-01'},
+            {'id':2,'title':'duplicate'}, {'id':True,'title':'invalid'},
+            {'id':4,'title':'TV collision','media_type':'tv'},
+            {'id':5,'title':'adult','adult':True}]}
+
+    async def test_canonical_parts_sorted_typed_deduplicated_and_cached(self):
+        movie={'id':1,'title':'Orbit I','belongs_to_collection':{'id':900}}
+        session=Session([Response(movie),Response(self.collection()),Response({'id':2,'title':'Orbit II','belongs_to_collection':{'id':900}})])
+        client=m.MediaDetailsClient(session,lambda:'fixture-key')
+        first=await client.details(media_type='movie',tmdb_id=1,language='de')
+        self.assertEqual([x['tmdb_id'] for x in first['collection']['parts']],[1,2,3])
+        self.assertTrue(all(x['media_type']=='movie' for x in first['collection']['parts']))
+        self.assertNotIn('fixture-key',str(first))
+        second=await client.details(media_type='movie',tmdb_id=2,language='de')
+        self.assertEqual(second['collection']['id'],900)
+        self.assertEqual(len(session.calls),3)
+        self.assertTrue(session.calls[1][0].endswith('/collection/900'))
+        self.assertEqual(session.calls[1][1]['params']['language'],'de')
+
+    async def test_collection_failure_preserves_details_and_retry_can_recover(self):
+        movie={'id':1,'title':'Orbit I','overview':'Plot','belongs_to_collection':{'id':900}}
+        session=Session([Response(movie),Response({},status=503),Response(movie),Response(self.collection())])
+        client=m.MediaDetailsClient(session,lambda:'fixture-key')
+        first=await client.details(media_type='movie',tmdb_id=1)
+        self.assertEqual(first['overview'],'Plot')
+        self.assertEqual(first['collection_error'],'collection_unavailable')
+        self.assertIsNone(first['collection'])
+        self.assertEqual((await client.details(media_type='movie',tmdb_id=1))['collection']['id'],900)
+
+    async def test_no_title_guessing_or_series_collection_lookup(self):
+        for kind,data in [('movie',{'id':1,'title':'Orbit I'}),('tv',{'id':1,'name':'Orbit','belongs_to_collection':{'id':900}})]:
+            session=Session([Response(data)])
+            result=await m.MediaDetailsClient(session,lambda:'fixture-key').details(media_type=kind,tmdb_id=1)
+            self.assertIsNone(result['collection'])
+            self.assertEqual(len(session.calls),1)
+
+    def test_membership_and_collection_identity_must_match(self):
+        for data,selected in [({'id':901,'parts':[]},1),(self.collection(),99),({'id':True,'parts':[]},1)]:
+            with self.assertRaises(m.MediaDetailsError):m.public_collection(data,900,selected)
+
+    async def test_wrong_movie_response_never_selects_a_different_collection_part(self):
+        client=m.MediaDetailsClient(Session([Response({'id':2,'title':'Wrong film'})]),lambda:'fixture-key')
+        with self.assertRaises(m.MediaDetailsError):
+            await client.details(media_type='movie',tmdb_id=1)

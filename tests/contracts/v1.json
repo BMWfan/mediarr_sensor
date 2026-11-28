@@ -1,5 +1,12 @@
 {
   "contract_version": 1,
+  "seerr_cases": [
+    {"request_status": 4, "media_status": 5, "kind": "movie", "stage": "ready"},
+    {"request_status": 2, "media_status": 4, "kind": "tv", "stage": "ready"},
+    {"request_status": 5, "media_status": 2, "kind": "movie", "stage": "waiting"},
+    {"request_status": 1, "media_status": null, "kind": "tv", "stage": "waiting"},
+    {"request_status": 2, "media_status": 4, "kind": "movie", "stage": "waiting"}
+  ],
   "minimum_versions": {
     "card": "0.6.0-dev.7",
     "sensor": "0.8.0-dev.6"

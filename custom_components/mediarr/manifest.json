@@ -14,7 +14,7 @@
     "aiofiles>=0.8.0"
   ],
   "iot_class": "local_polling",
-  "version": "0.8.0-dev.8",
+  "version": "0.8.0-dev.12",
   "categories": [
     "media_entertainment.tv_streaming"
   ]

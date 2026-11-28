@@ -184,11 +184,18 @@ async def websocket_playback_control(hass, connection, msg):
         "type": "mediarr/play",
         ws_schema.Required("entity_id"): str,
         ws_schema.Required("library_key"): str,
+        ws_schema.Optional("library_scope"): str,
     }
 )
 @websocket_api.async_response
 async def websocket_play(hass, connection, msg):
     try:
+        if msg.get("library_scope"):
+            from .library import configured_sources
+            from .snapshot_cache import source_scope
+            cache = getattr(hass.data[DOMAIN].get("library_client"), "_snapshot_cache", None)
+            if cache is None or cache.public_scope != msg["library_scope"] or cache.scope != source_scope(configured_sources(hass)):
+                raise MediaDetailsError("library_config_changed", "Refresh the library before playback.")
         result = await play(hass, connection.user, msg["entity_id"], msg["library_key"])
     except MediaDetailsError as error:
         connection.send_error(msg["id"], error.code, str(error))
